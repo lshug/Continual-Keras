@@ -48,7 +48,7 @@ class ContinualClassifierEvaluator():
     def train(self,verbose=2):
         for i in range(len(self.tasks)):
             print('Training on task %d'%i)
-            self.classifier.task_fit(tasks[i],labels[i],verbose=verbose)
+            self.classifier.task_fit(self.tasks[i],self.labels[i],verbose=verbose)
             for j in range(len(self.tasks)):
                 self.accuracies[i,j] = self.classifier.task_model(i).evaluate(tasks[j],labels[j])[1]
     

@@ -18,8 +18,8 @@ from keras.datasets import mnist
 #tasks, labels = divide_dataset_into_tasks(X,Y,5)
 
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
-x_train = x_train.reshape(60000,784)/255.0
-tasks, labels = divide_dataset_into_tasks(x_train,y_train,5)
+X = x_train.reshape(60000,784)/255.0
+tasks, labels = divide_dataset_into_tasks(X,y_train,5)
 
 ewc = EWCClassifier((X.shape[1],),fisher_n=100)
 evaluator = ContinualClassifierEvaluator(ewc, tasks, labels)
