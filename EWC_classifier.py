@@ -6,7 +6,7 @@ from sklearn.utils import shuffle
 
 
 class EWCClassifier(ContinualClassifier):
-    def __init__(self, shape, optimizer='adam', lr=0.00001, epochs=10, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
+    def __init__(self, shape, optimizer='adam', lr=0.00001, epochs=2, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
         self.ewc_lambda = ewc_lambda
         self.modes = []
         self.precisions = []
@@ -43,13 +43,13 @@ class EWCClassifier(ContinualClassifier):
         model.fit(X,Y,epochs = self.epochs, verbose=verbose, validation_data = validation_data, shuffle=True)
         estimate_fisher()
     
-    def task_fit_method(self, X, Y, validation_data=None, verbose=0):
-        pass
+    
      
     def categorical_nll(y, logs):
         return -1*K.mean(tf.boolean_mask(logs,y))
     
     def estimate_fisher(self,X,Y):
+        print('Fising\'')
         if singleheaded:
             model = self.model
         else:
@@ -112,6 +112,3 @@ class EWCClassifier(ContinualClassifier):
             return self.EWC_lambda*0.5*K.sum((prec) * (weights-mean)**2)
         return ewc_reg
 
-if __name__ == '__main__':
-    ContinualClassifier((20,))
-    print('Continual classifier created')

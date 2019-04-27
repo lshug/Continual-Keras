@@ -48,9 +48,21 @@ class ContinualClassifier(ABC):
             self.model.compile(loss=loss,optimizer=optim,metrics=metrics)
         else:
             self.model=model
+            
+#    @abstractmethod
+    def task_fit_method(self, X, Y, validation_data=None, verbose=0):
+        print('No task fit method')
         
         
-    
+#    @abstractmethod
+    def save_model(self, filename):
+        pass        
+        
+    def task_model(self,task):
+        if self.singleheaded:
+            return self.model
+        else:
+            return self.models[task]
     
     def task_fit(self, X, Y, validation_data=None, verbose=0):
         if not self.singleheaded:
@@ -58,15 +70,9 @@ class ContinualClassifier(ABC):
             task_Model = Model(self.model.input,x)
             task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
             self.models.append(task_Model)
-        task_fit_method(X,Y,validation_data,verbose)
+        self.task_fit_method(X,Y,validation_data,verbose)
     
-#    @abstractmethod
-    def task_fit_method(self, X, Y, validation_data=None, verbose=0):
-        pass
-        
-#    @abstractmethod
-    def save_model(self, filename):
-        pass
+
         
 #    @abstractmethod
     def load_model(self, filename):
