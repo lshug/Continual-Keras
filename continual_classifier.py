@@ -2,7 +2,7 @@ import numpy as np
 from keras.models import Model
 from keras.layers import Input, Dense, Activation, Dropout
 from AdamW import AdamW
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adam
 from abc import ABC, abstractmethod
 
 
@@ -22,11 +22,13 @@ class ContinualClassifier(ABC):
     AdamW. Any loss and any activation from keras api can be used.
     If singleheaded_classes is None, models are stored in self.models.
     """
-    def __init__(self, shape, optimizer='adam', lr=0.00001, epochs=10, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
+    def __init__(self, shape, optimizer='adam', lr=0.001, epochs=200, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
         self.epochs = epochs
-        optim = AdamW(lr)
-        if optimizer is not 'adam':
+        optim = Adam(lr)
+        if optimizer is 'sgd':
             optim = SGD(lr)
+        if optimizer is 'adamw':
+            optim = AdamW(lr)
         self.optimizer = optim
         self.loss = loss
         self.metrics = metrics
@@ -38,7 +40,7 @@ class ContinualClassifier(ABC):
                 if model['dropout']>0:
                     x = Dropout(model['dropout'])(x)
             if singleheaded_classes is not None:
-                x = Dense(singleheaded_classes,'softmax',name='singlehead')(x)
+                x = Dense(singleheaded_classes,activation='softmax',name='singlehead')(x)
                 self.singleheaded = True
             else:
                 self.singleheaded = False

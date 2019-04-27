@@ -10,7 +10,7 @@ def categorical_nll(y, logs):
     return -1*K.mean(tf.boolean_mask(logs,y))
 
 class EWCClassifier(ContinualClassifier):
-    def __init__(self, shape, optimizer='adam', lr=0.00001, epochs=10, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
+    def __init__(self, shape, optimizer='adam', lr=0.0005, epochs=150, metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
         self.ewc_lambda = ewc_lambda
         self.modes = []
         self.precisions = []
@@ -18,7 +18,7 @@ class EWCClassifier(ContinualClassifier):
         self.fisher_n=fisher_n
         self.empirical=empirical
         self.gamma=gamma
-        super().__init__(shape,optimizer,lr,epochs,loss,metrics,singleheaded_classes,model)
+        super().__init__(shape,optimizer,lr,epochs,categorical_nll,metrics,singleheaded_classes,model)
     
     def save_model(self, filename):
         pass
@@ -74,7 +74,7 @@ class EWCClassifier(ContinualClassifier):
                 label = wrapped_model.predict(np.array([X[i]]))[0]
             else:
                 label = Y[i]
-            gradients = K.get_session().run(K.gradients(wrapped_model.output,wrapped_model.trainable_weights), feed_dict={wrapped_model.input:np.array([X[i]])})
+            gradients = K.get_session().run(K.gradients(categorical_nll(label,wrapped_model.output),wrapped_model.trainable_weights), feed_dict={wrapped_model.input:np.array([X[i]])})
             for i in range(0,len_weights):
                 fisher_estimates[i]+=gradients[i]**2
         for i in range(0,len_weights):
@@ -111,6 +111,14 @@ class EWCClassifier(ContinualClassifier):
                 return self.ewc_lambda*0.5*K.sum((gamma*prec) * (weights-mean)**2)
             return ewc_reg
         def ewc_reg(weights):
-            return self.EWC_lambda*0.5*K.sum((prec) * (weights-mean)**2)
+            loss_total = None
+            for i in range(task_count):
+                if loss_total is None:
+                    loss_total=self.EWC_lambda*0.5*K.sum((prec[i][weight_no]) * (weights-self.means[i][weight_no])**2)
+                else:
+                    loss_total+=self.EWC_lambda*0.5*K.sum((prec[i][weight_no]) * (weights-self.means[i][weight_no])**2)
+            return loss_total
         return ewc_reg
+        
+        
 
