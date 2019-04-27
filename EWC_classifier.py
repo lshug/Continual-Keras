@@ -4,6 +4,7 @@ import tensorflow as tf
 import keras.backend as K
 from sklearn.utils import shuffle
 
+
 class EWCClassifier(ContinualClassifier):
     def __init__(self, shape, optimizer='adam', lr=0.00001, epochs=10, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
         self.ewc_lambda = ewc_lambda
@@ -15,8 +16,14 @@ class EWCClassifier(ContinualClassifier):
         self.gamma=gamma
         super().__init__(shape,optimizer,lr,epochs,loss,metrics,singleheaded_classes,model)
     
+    def save_model(self, filename):
+        pass
+        
     
-    def __task_fit(self, X, Y, validation_data=None, verbose=0):
+    def load_model(self, filename):
+        pass
+    
+    def task_fit_method(self, X, Y, validation_data=None, verbose=0):
         i = 0
         while True:
             try:
@@ -35,7 +42,10 @@ class EWCClassifier(ContinualClassifier):
             model = self.models[-1]
         model.fit(X,Y,epochs = self.epochs, verbose=verbose, validation_data = validation_data, shuffle=True)
         estimate_fisher()
-        
+    
+    def task_fit_method(self, X, Y, validation_data=None, verbose=0):
+        pass
+     
     def categorical_nll(y, logs):
         return -1*K.mean(tf.boolean_mask(logs,y))
     
@@ -101,32 +111,7 @@ class EWCClassifier(ContinualClassifier):
         def ewc_reg(weights):
             return self.EWC_lambda*0.5*K.sum((prec) * (weights-mean)**2)
         return ewc_reg
-    '''
-    During init, call super, then if singleheaded add the regularizer to 
-    self.model with model.get_layer(index=-1).kernel/bias_regularizer=EWC(
-    weightindex). If 
-    multiheaded, do that on a per-task basis (modify the last model in self.models).    
-    
-    AFTER-TASK CALLBACK: ESTIMATE FISHER, REFRESH REGULARIZERS
-    
-    PER-TASK REGULARIZATION: ADD EWC LOSS BASED ON ESTIMATED FISHER
-    
-    esimate the fisher matrix on current task's classes using n samples of the current task dataset (full task dataset if n is 0). If empirical, use provided labels, else use model's predictions.
-        -for each weight in the model (except the last if mutliheaded), make the same-sized zeros array
-        -wrap the model in an outer model that adds a logarithm, then compile
-        with NLL loss (implement)
-        -for n (n=X.shape[0] if n=0), get the label (either by using the
-        provided labels or by passing through the model), call it est_label, 
-        then calculate the wrapped model's gradients and and add the square of
-        the gradient for each weight (except the last if mutliheaded) to arrays 
-        made in the first step.
-        
-    
-    train on a task X,Y
-    
-    adjust task count (increment if offline, set to 1 if online)
-    if task count>0:
-        
-    total added loss = ewc_loss*ewc_lambda
-    '''
-        
+
+if __name__ == '__main__':
+    ContinualClassifier((20,))
+    print('Continual classifier created')

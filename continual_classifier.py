@@ -34,10 +34,10 @@ class ContinualClassifier(ABC):
             inp = Input(shape,name='inputlayer')
             x = inp
             for i in range(0,model['layers']):
-                x = Dense(model['units'],model['activation'],name='dense%d'%i)(x)
-                if model[dropout]>0:
-                    x = Dropout(model[dropout])(x)
-            if singleheaded_classes_classes is not None:
+                x = Dense(model['units'],activation=model['activation'],name='dense%d'%i)(x)
+                if model['dropout']>0:
+                    x = Dropout(model['dropout'])(x)
+            if singleheaded_classes is not None:
                 x = Dense(singleheaded_classes,'softmax',name='singlehead')(x)
                 self.singleheaded = True
             else:
@@ -58,16 +58,16 @@ class ContinualClassifier(ABC):
             task_Model = Model(self.model.input,x)
             task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
             self.models.append(task_Model)
-        __task_fit(X,Y,validation_data,verbose)
+        task_fit_method(X,Y,validation_data,verbose)
     
-    @abstractmethod
-    def __task_fit(self, X, Y, validation_data=None, verbose=0):
+#    @abstractmethod
+    def task_fit_method(self, X, Y, validation_data=None, verbose=0):
         pass
         
-    @abstractmethod
+#    @abstractmethod
     def save_model(self, filename):
         pass
         
-    @abstractmethod
+#    @abstractmethod
     def load_model(self, filename):
         pass
