@@ -36,12 +36,12 @@ class EWCClassifier(ContinualClassifier):
             except:
                 break
         
-        if singleheaded:
+        if self.singleheaded:
             model = self.model
         else:
             model = self.models[-1]
         model.fit(X,Y,epochs = self.epochs, verbose=verbose, validation_data = validation_data, shuffle=True)
-        estimate_fisher()
+        self.estimate_fisher()
     
     
      
@@ -50,7 +50,7 @@ class EWCClassifier(ContinualClassifier):
     
     def estimate_fisher(self,X,Y):
         print('Fising\'')
-        if singleheaded:
+        if self.singleheaded:
             model = self.model
         else:
             model = self.models[-1]
