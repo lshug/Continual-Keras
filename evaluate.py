@@ -13,7 +13,8 @@ def divide_dataset_into_tasks(X,Y,T):
     Y_categorical = to_categorical(Y)
     dropped = Y_categorical.shape[1] % T
     classes = Y_categorical.shape[1] - dropped
-    Y_categorical = Y_categorical[:,0:-1*dropped]
+    if dropped is not 0:
+        Y_categorical = Y_categorical[:,0:-1*dropped]
     per_task = classes/T
     tasks = []
     labels = []
@@ -30,6 +31,7 @@ def divide_dataset_into_tasks(X,Y,T):
             else:
                 X_t=np.concatenate([X_t, X[mask]])
                 Y_t=np.concatenate([Y_t, Y_categorical[mask]])
+        
         tasks.append(X_t)
         labels.append(Y_t)
         i+=per_task
@@ -43,10 +45,10 @@ class ContinualClassifierEvaluator():
         self.labels=labels
         self.accuracies = np.zeros((len(tasks),len(tasks)))
     
-    def train(self):
+    def train(self,verbose=2):
         for i in range(len(self.tasks)):
             print('Training on task %d'%i)
-            self.classifier.task_fit(tasks[i],labels[i])
+            self.classifier.task_fit(tasks[i],labels[i],verbose=verbose)
             for j in range(len(self.tasks)):
                 self.accuracies[i,j] = self.classifier.task_model(i).evaluate(tasks[j],labels[j])[1]
     
@@ -73,15 +75,3 @@ class ContinualClassifierEvaluator():
         print('AAC: {} \n BWT: {} \n FWT: {}'.format(ACC,BWT,FWT))
         
 
-df = pd.read_csv('merged1000')
-df = df.drop(['Unnamed: 0'], axis=1)
-labels = df['1']
-Y = np.argmax(pd.get_dummies(labels).values, axis=1)
-df = df.drop(['1'], axis=1)
-X = np.array(df)
-tasks, labels = divide_dataset_into_tasks(X,Y,20)
-
-ewc = EWCClassifier((400,))
-evaluator = ContinualClassifierEvaluator(ewc, tasks, labels)
-evaluator.train()
-evaluator.evaluate()

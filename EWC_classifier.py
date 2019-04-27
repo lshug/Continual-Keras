@@ -1,12 +1,16 @@
 from continual_classifier import ContinualClassifier
+import numpy as np
 from keras.models import Model
+from keras.layers import Lambda
 import tensorflow as tf
 import keras.backend as K
 from sklearn.utils import shuffle
 
+def categorical_nll(y, logs):
+    return -1*K.mean(tf.boolean_mask(logs,y))
 
 class EWCClassifier(ContinualClassifier):
-    def __init__(self, shape, optimizer='adam', lr=0.00001, epochs=2, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
+    def __init__(self, shape, optimizer='adam', lr=0.00001, epochs=10, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
         self.ewc_lambda = ewc_lambda
         self.modes = []
         self.precisions = []
@@ -23,16 +27,18 @@ class EWCClassifier(ContinualClassifier):
     def load_model(self, filename):
         pass
     
-    def task_fit_method(self, X, Y, validation_data=None, verbose=0):
+    def task_fit_method(self, X, Y, validation_data=None, verbose=2):
         i = 0
+        j = 0
         while True:
             try:
                 l = self.model.get_layer(index=i)
                 if len(l.trainable_weights)>0:
-                    l.bias_regularizer=EWC(i)
-                    i+=1
-                    l.kernel_regularizer=EWC(i)
-                    i+=1
+                    l.bias_regularizer=EWC(j)
+                    j+=1
+                    l.kernel_regularizer=EWC(j)
+                    j+=1
+                i+=1
             except:
                 break
         
@@ -41,33 +47,29 @@ class EWCClassifier(ContinualClassifier):
         else:
             model = self.models[-1]
         model.fit(X,Y,epochs = self.epochs, verbose=verbose, validation_data = validation_data, shuffle=True)
-        self.estimate_fisher()
-    
-    
-     
-    def categorical_nll(y, logs):
-        return -1*K.mean(tf.boolean_mask(logs,y))
+        self.estimate_fisher(X,Y)
     
     def estimate_fisher(self,X,Y):
-        print('Fising\'')
+        print('Fishing\'')
         if self.singleheaded:
             model = self.model
         else:
             model = self.models[-1]
-        len_weights = model.get_weights()
+        len_weights = len(model.get_weights())
         if not self.singleheaded:
             len_weights-=1
         fisher_estimates = []
         for i in range(0,len_weights):
             fisher_estimates.append(np.zeros_like(model.get_weights()[i]))
-        x = K.log(model.ouput)
+        x = Lambda(lambda l: K.log(l))(model.output)
         wrapped_model = Model(model.input,x)
         wrapped_model.compile(loss=categorical_nll,optimizer=self.optimizer,metrics=self.metrics)
         X,Y = shuffle(X,Y)
         fisher_n = self.fisher_n
-        if self.fisher_n is 0:
+        if self.fisher_n is 0 or self.fisher_n>X.shape[0]:
             fisher_n = X.shape[0]
         for i in range(0,fisher_n):
+            print('Fish no. {} out of {}'.format(i,fisher_n))
             if self.empirical is False:
                 label = wrapped_model.predict(np.array([X[i]]))[0]
             else:
