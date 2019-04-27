@@ -1,4 +1,4 @@
-from continual_clasifier import ContinualClassifier
+from continual_classifier import ContinualClassifier
 from keras.models import Model
 import tensorflow as tf
 import keras.backend as K
@@ -62,7 +62,7 @@ class EWCClassifier(ContinualClassifier):
                 label = wrapped_model.predict(np.array([X[i]]))[0]
             else:
                 label = Y[i]
-            gradients = K.get_session().run(K.gradients(wrapped_model.output,wrapped_model.trainable_weights), feed_dict={wrapped_model.input=np.array([X[i]]))
+            gradients = K.get_session().run(K.gradients(wrapped_model.output,wrapped_model.trainable_weights), feed_dict={wrapped_model.input:np.array([X[i]])})
             for i in range(0,len_weights):
                 fisher_estimates[i]+=gradients[i]**2
         for i in range(0,len_weights):
