@@ -1,7 +1,6 @@
 import numpy as np
 from keras.models import Model
 from keras.layers import Input, Dense, Activation, Dropout
-from AdamW import AdamW
 from keras.optimizers import SGD, Adam
 from abc import ABC, abstractmethod
 
@@ -27,8 +26,6 @@ class ContinualClassifier(ABC):
         optim = Adam(lr)
         if optimizer is 'sgd':
             optim = SGD(lr)
-        if optimizer is 'adamw':
-            optim = AdamW(lr)
         self.optimizer = optim
         self.loss = loss
         self.metrics = metrics
