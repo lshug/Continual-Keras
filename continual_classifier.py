@@ -52,7 +52,7 @@ class ContinualClassifier(ABC):
             self.model=model
             
 #    @abstractmethod
-    def task_fit_method(self, X, Y, validation_data=None, verbose=0):
+    def task_fit_method(self, X, Y, model, validation_data=None, verbose=0):
         print('No task fit method')
         
         
@@ -60,21 +60,41 @@ class ContinualClassifier(ABC):
     def save_model(self, filename):
         pass        
         
-    def task_model(self,task):
+    def task_model(self,task=-1):
         if self.singleheaded:
             return self.model
         else:
             return self.models[task]
     
-    def task_fit(self, X, Y, validation_data=None, verbose=0):
+    def task_fit(self, X, Y, task=None, validation_data=None, verbose=0):
         if not self.singleheaded:
-            x = Dense(Y.shape[1],activation='softmax',name='output_task%d'%(len(self.models)+1))(self.model.output)
-            task_Model = Model(self.model.input,x)
-            task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
-            self.models.append(task_Model)
-        self.task_fit_method(X,Y,validation_data,verbose)
+            if task is None:
+                raise Exception('Task number should be provided in task_fit if the model is not singleheaded')
+            Y=Y[:,np.sum(Y,0)!=0]
+            try:
+                model = self.task_model(task)
+            except:
+                x = Dense(Y.shape[1],activation='softmax',name='output_task%d'%(len(self.models)+1))(self.model.output)
+                task_Model = Model(self.model.input,x)
+                task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
+                self.models.append(task_Model)
+                model = task_Model
+        self.task_fit_method(X,Y,model,validation_data,verbose)
     
-
+    def evaluate(self,X,Y,task=None):
+        if not self.singleheaded:
+            if task is None:
+                raise Exception('Task number should be provided in evaluate if the model is not singleheaded')
+            Y=Y[:,np.sum(Y,0)!=0]
+            try:
+                model = self.task_model(task)
+            except:
+                x = Dense(Y.shape[1],activation='softmax',name='output_task%d'%(len(self.models)+1))(self.model.output)
+                task_Model = Model(self.model.input,x)
+                task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
+                self.models.append(task_Model)
+                model = task_Model
+        return self.task_model(task).evaluate(X,Y)
         
 #    @abstractmethod
     def load_model(self, filename):

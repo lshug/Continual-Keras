@@ -5,6 +5,7 @@ from keras.layers import Lambda
 import tensorflow as tf
 import keras.backend as K
 from sklearn.utils import shuffle
+from tqdm import tqdm
 
 def categorical_nll(y, logs):
     return -1*K.mean(tf.boolean_mask(logs,y))
@@ -27,7 +28,7 @@ class EWCClassifier(ContinualClassifier):
     def load_model(self, filename):
         pass
     
-    def task_fit_method(self, X, Y, validation_data=None, verbose=2):
+    def task_fit_method(self, X, Y, model, validation_data=None, verbose=2):
         i = 0
         j = 0
         while True:
@@ -41,11 +42,6 @@ class EWCClassifier(ContinualClassifier):
                 i+=1
             except:
                 break
-        
-        if self.singleheaded:
-            model = self.model
-        else:
-            model = self.models[-1]
         model.fit(X,Y,epochs = self.epochs, verbose=verbose, validation_data = validation_data, shuffle=True)
         self.estimate_fisher(X,Y)
     
@@ -68,15 +64,28 @@ class EWCClassifier(ContinualClassifier):
         fisher_n = self.fisher_n
         if self.fisher_n is 0 or self.fisher_n>X.shape[0]:
             fisher_n = X.shape[0]
-        for i in range(0,fisher_n):
+        
+        X=X[0:fisher_n]
+        if self.empirical is False:            
+            label=wrapped_model.predict(X)
+        else:
+            label=Y[0:fisher_n]
+            
+        #for each x,y pair, count the gradient with respect to the loss.
+        gradients = []
+        sess=K.get_session()
+        y_placeholder = tf.placeholder(tf.float32, shape=Y[0].shape)
+        grads_tesnor = K.gradients(categorical_nll(y_placeholder,wrapped_model.output),wrapped_model.trainable_weights)
+        for i in tqdm(range(fisher_n)):
             print('Fish no. {} out of {}'.format(i,fisher_n))
-            if self.empirical is False:
-                label = wrapped_model.predict(np.array([X[i]]))[0]
-            else:
-                label = Y[i]
-            gradients = K.get_session().run(K.gradients(categorical_nll(label,wrapped_model.output),wrapped_model.trainable_weights), feed_dict={wrapped_model.input:np.array([X[i]])})
-            for i in range(0,len_weights):
-                fisher_estimates[i]+=gradients[i]**2
+            gradients.append(sess.run(grads_tesnor, feed_dict={y_placeholder:Y[i],wrapped_model.input:np.array([X[i]])}))
+        
+        
+        
+        for i in tqdm(range(fisher_n)):
+            for j in range(len_weights):
+                fisher_estimates[j]+=gradients[i][j]**2
+        
         for i in range(0,len_weights):
             fisher_estimates[i]=fisher_estimates[i]/fisher_n
         

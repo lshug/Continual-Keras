@@ -48,9 +48,9 @@ class ContinualClassifierEvaluator():
     def train(self,verbose=2):
         for i in range(len(self.tasks)):
             print('Training on task %d'%i)
-            self.classifier.task_fit(self.tasks[i],self.labels[i],verbose=verbose)
+            self.classifier.task_fit(self.tasks[i],self.labels[i],i,verbose=verbose)
             for j in range(len(self.tasks)):
-                self.accuracies[i,j] = self.classifier.task_model(i).evaluate(self.tasks[j],self.labels[j])[1]
+                self.accuracies[i,j] = self.classifier.evaluate(self.tasks[j],self.labels[j],j)[1]
     
     def evaluate(self):
         ACC = np.sum(self.accuracies[-1])/len(self.tasks)
@@ -68,7 +68,7 @@ class ContinualClassifierEvaluator():
         
         FWT = 0
         for i in range(1,len(self.tasks)):
-            FWT+=self.accuracies[i,i] - self.classifier.task_model(i).evaluate(self.tasks[i],self.labels[i])[1]
+            FWT+=self.accuracies[i,i] - self.classifier.evaluate(self.tasks[i],self.labels[i],i)[1]
         FWT = FWT/(len(self.tasks)-1)    
         self.classifier.model.set_weights(trained_weights)
         
