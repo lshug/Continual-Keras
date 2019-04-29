@@ -79,7 +79,7 @@ class ContinualClassifier(ABC):
                 model = task_Model
         self.task_fit_method(X,Y,model,validation_data,verbose)
     
-    def evaluate(self,X,Y,task=None):
+    def evaluate(self,X,Y,task=None,verbose=0):
         if not self.singleheaded:
             if task is None:
                 raise Exception('Task number should be provided in evaluate if the model is not singleheaded')
@@ -92,7 +92,7 @@ class ContinualClassifier(ABC):
                 task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
                 self.models.append(task_Model)
                 model = task_Model
-        return self.task_model(task).evaluate(X,Y)
+        return self.task_model(task).evaluate(X,Y,verbose)
         
 #    @abstractmethod
     def load_model(self, filename):

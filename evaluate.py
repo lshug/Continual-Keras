@@ -106,7 +106,7 @@ class ContinualClassifierEvaluator():
         
         
         print('Metrics on {} set:'.format('test' if on_test else 'training'))
-        print('AAC: {} \n BWT: {} \n FWT: {}'.format(ACC,BWT,FWT))
+        print('AAC: {}\n BWT: {}\n FWT: {}'.format(ACC,BWT,FWT))
         if save_accuracies_to_file is not None:
             np.save(save_accuracies_to_file,self.accuracies)
         
