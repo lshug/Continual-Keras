@@ -105,8 +105,6 @@ class EWCClassifier(ContinualClassifier):
             
     
     def EWC(self,weight_no):
-        '''returns a func that takes in weights,
-        '''
         mean = self.means[-1][weight_no]
         prec = self.precisions[-1][weight_no]
         gamma = self.gamma

@@ -1,7 +1,6 @@
 import numpy as np
 from keras.models import Model
 from keras.layers import Input, Dense, Activation, Dropout
-from AdamW import AdamW
 from keras.optimizers import SGD, Adam
 import numpy as np
 import pandas as pd
@@ -67,7 +66,7 @@ tasks, labels = divide_dataset_into_tasks(X,y_train,5)
 #m.fit(X[0],Y[0],epochs=200)
 
 #singleheaded_classes=10,
-ewc = EWCClassifier((X.shape[1],),fisher_n=3000,epochs=10,ewc_lambda=500)
+ewc = EWCClassifier((X.shape[1],),fisher_n=3000,epochs=10,ewc_lambda=500,empirical=True)
 evaluator = ContinualClassifierEvaluator(ewc, tasks, labels)
 evaluator.train()
 evaluator.evaluate()
