@@ -13,7 +13,7 @@ from keras.datasets import mnist
 import os
 from permute_mnist import get_permute_mnist_tasks
 
-task ='mnist'
+task ='permnist'
 
 
 if task is 'mnist':
@@ -23,10 +23,10 @@ if task is 'mnist':
     tasks, labels = divide_dataset_into_tasks(X,y_train,5)
     
 if task is 'permnist':
-    tasks, labels = get_permute_mnist_tasks(20)
+    tasks, labels = get_permute_mnist_tasks(20,1000)
 
 
-ewc = EWCClassifier((tasks[0].shape[1],),fisher_n=3000,epochs=10,ewc_lambda=500,lr=0.00005,empirical=True)
+ewc = EWCClassifier((tasks[0].shape[1],),fisher_n=3000,epochs=5,batch=20,ewc_lambda=3,lr=0.1,optimizer='sgd',model={'layers':2, 'units':100,'dropout':0,'activation':'relu'})
 evaluator = ContinualClassifierEvaluator(ewc, tasks, labels)
-evaluator.train()
+evaluator.train(verbose=1)
 evaluator.evaluate(save_accuracies_to_file='accuracies.npy')
