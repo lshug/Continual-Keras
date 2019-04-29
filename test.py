@@ -29,4 +29,4 @@ if task is 'permnist':
 ewc = EWCClassifier((tasks[0].shape[1],),fisher_n=3000,epochs=10,ewc_lambda=500,lr=0.00005,empirical=True)
 evaluator = ContinualClassifierEvaluator(ewc, tasks, labels)
 evaluator.train()
-evaluator.evaluate()
+evaluator.evaluate(save_accuracies_to_file='accuracies.npy')

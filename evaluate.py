@@ -39,11 +39,19 @@ def divide_dataset_into_tasks(X,Y,T):
 
 
 class ContinualClassifierEvaluator():
-    def __init__(self, classifier, tasks, labels):
+    def __init__(self, classifier, tasks, labels, test_tasks=None, test_labels=None):
         self.classifier=classifier
         self.tasks=tasks
         self.labels=labels
         self.accuracies = np.zeros((len(tasks),len(tasks)))
+        self.test_available = False
+        if test_tasks is not None:
+            self.test_available = False
+            if len(test_tasks) is not len(tasks):
+                raise Exception('Training and testing task numbers do no match')
+            self.test_tasks = test_tasks
+            self.test_labels = test_labels
+            self.test_accuracies = np.zeros((len(tasks),len(tasks)))
     
     def train(self,verbose=2):
         for i in range(len(self.tasks)):
@@ -51,14 +59,26 @@ class ContinualClassifierEvaluator():
             self.classifier.task_fit(self.tasks[i],self.labels[i],i,verbose=verbose)
             for j in range(len(self.tasks)):
                 self.accuracies[i,j] = self.classifier.evaluate(self.tasks[j],self.labels[j],j)[1]
+                if self.test_available:
+                    self.test_accuracies[i,j] = self.classifier.evaluate(self.test_tasks[j],self.test_labels[j],j)[1]
     
-    def evaluate(self):
-        ACC = np.sum(self.accuracies[-1])/len(self.tasks)
+    def evaluate(self,save_accuracies_to_file=None,on_test=False):
+        tasks = self.tasks
+        labels = self.labels
+        accuracies = self.accuracies
+        if on_test:
+            if not self.test_available:
+                raise Exception('Testing task set not provided')
+            tasks = test_tasks
+            labels = test_labels
+            accuracies = self.test_accuracies
+        
+        ACC = np.sum(accuracies[-1])/len(tasks)
         
         BWT = 0
-        for i in range(len(self.tasks)-1):
-            BWT+=(self.accuracies[-1][i] - self.accuracies[i][i])
-        BWT = BWT/(len(self.tasks)-1)
+        for i in range(len(tasks)-1):
+            BWT+=(accuracies[-1][i] - accuracies[i][i])
+        BWT = BWT/(len(tasks)-1)
         
         trained_weights = self.classifier.model.get_weights()
         random_weights = []
@@ -67,11 +87,13 @@ class ContinualClassifierEvaluator():
         self.classifier.model.set_weights(random_weights)
         
         FWT = 0
-        for i in range(1,len(self.tasks)):
-            FWT+=self.accuracies[i,i] - self.classifier.evaluate(self.tasks[i],self.labels[i],i)[1]
-        FWT = FWT/(len(self.tasks)-1)    
+        for i in range(1,len(tasks)):
+            FWT+=accuracies[i,i] - self.classifier.evaluate(tasks[i],labels[i],i)[1]
+        FWT = FWT/(len(tasks)-1)    
         self.classifier.model.set_weights(trained_weights)
         
         print('AAC: {} \n BWT: {} \n FWT: {}'.format(ACC,BWT,FWT))
+        if save_accuracies_to_file is not None:
+            np.save(save_accuracies_to_file,self.accuracies)
         
 

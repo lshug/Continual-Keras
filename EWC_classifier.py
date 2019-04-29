@@ -11,7 +11,7 @@ def categorical_nll(y, x):
     return -1*K.mean(tf.boolean_mask(tf.log(x),y))
 
 class EWCClassifier(ContinualClassifier):
-    def __init__(self, shape, optimizer='adam', lr=0.0005, epochs=150, metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
+    def __init__(self, shape, optimizer='adam',batch=32, lr=0.0005, epochs=150, metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
         self.ewc_lambda = ewc_lambda
         self.modes = []
         self.precisions = []
@@ -19,7 +19,7 @@ class EWCClassifier(ContinualClassifier):
         self.fisher_n=fisher_n
         self.empirical=empirical
         self.gamma=gamma
-        super().__init__(shape,optimizer,lr,epochs,categorical_nll,metrics,singleheaded_classes,model)
+        super().__init__(shape,optimizer,batch,lr,epochs,categorical_nll,metrics,singleheaded_classes,model)
     
     def save_model(self, filename):
         pass
@@ -42,11 +42,10 @@ class EWCClassifier(ContinualClassifier):
                 i+=1
             except:
                 break
-        model.fit(X,Y,epochs = self.epochs, verbose=verbose, validation_data = validation_data, shuffle=True)
+        model.fit(X,Y,epochs = self.epochs, batch_size=self.batch, verbose=verbose, validation_data = validation_data, shuffle=True)
         self.estimate_fisher(X,Y)
     
     def estimate_fisher(self,X,Y):
-        print('Fishing\'')
         if self.singleheaded:
             model = self.model
         else:
@@ -77,7 +76,6 @@ class EWCClassifier(ContinualClassifier):
         y_placeholder = tf.placeholder(tf.float32, shape=Y[0].shape)
         grads_tesnor = K.gradients(categorical_nll(y_placeholder,wrapped_model.output),wrapped_model.trainable_weights)
         for i in tqdm(range(fisher_n)):
-            print('Fish no. {} out of {}'.format(i,fisher_n))
             gradients.append(sess.run(grads_tesnor, feed_dict={y_placeholder:Y[i],wrapped_model.input:np.array([X[i]])}))
         
         

@@ -21,8 +21,9 @@ class ContinualClassifier(ABC):
     AdamW. Any loss and any activation from keras api can be used.
     If singleheaded_classes is None, models are stored in self.models.
     """
-    def __init__(self, shape, optimizer='adam', lr=0.001, epochs=200, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
+    def __init__(self, shape, optimizer='adam',batch=32, lr=0.001, epochs=200, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
         self.epochs = epochs
+        self.batch=batch
         optim = Adam(lr)
         if optimizer is 'sgd':
             optim = SGD(lr)
