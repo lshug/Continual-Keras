@@ -47,7 +47,7 @@ def split_train_test(tasks,labels,fraction=0.2):
         new_tasks.append(tasks[i][0:last_n])
         new_labels.append(labels[i][0:last_n])
         test_tasks.append(tasks[i][last_n:])
-        new_labels.append(labels[i][last_n:])        
+        test_labels.append(labels[i][last_n:])        
     return new_tasks,new_labels,test_tasks,test_labels
     
 class ContinualClassifierEvaluator():

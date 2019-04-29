@@ -7,11 +7,11 @@ import pandas as pd
 from keras.utils import to_categorical
 import cv2
 import tensorflow as tf
-from evaluate import ContinualClassifierEvaluator, divide_dataset_into_tasks
+from evaluate import ContinualClassifierEvaluator, divide_dataset_into_tasks,split_train_test
 from EWC_classifier import EWCClassifier
 from keras.datasets import mnist
 import os
-from permute_mnist import get_permute_mnist_tasks, split_train_test
+from permute_mnist import get_permute_mnist_tasks
 
 task ='permnist'
 
@@ -23,7 +23,7 @@ if task is 'mnist':
     tasks, labels = divide_dataset_into_tasks(X,y_train,5)
     
 if task is 'permnist':
-    tasks, labels = get_permute_mnist_tasks(20,1000)
+    tasks, labels = get_permute_mnist_tasks(20,1250)
 
 tasks, labels, test_tasks, test_labels = split_train_test(tasks,labels)
 
