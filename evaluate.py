@@ -81,8 +81,8 @@ class ContinualClassifierEvaluator():
         if on_test:
             if not self.test_available:
                 raise Exception('Testing task set not provided')
-            tasks = test_tasks
-            labels = test_labels
+            tasks = self.test_tasks
+            labels = self.test_labels
             accuracies = self.test_accuracies
         
         ACC = np.sum(accuracies[-1])/len(tasks)
@@ -103,7 +103,7 @@ class ContinualClassifierEvaluator():
             FWT+=accuracies[i,i] - self.classifier.evaluate(tasks[i],labels[i],i)[1]
         FWT = FWT/(len(tasks)-1)    
         self.classifier.model.set_weights(trained_weights)
-        
+        prints('Metrics on {} set:'.format('test' if on_test else 'training'))
         print('AAC: {} \n BWT: {} \n FWT: {}'.format(ACC,BWT,FWT))
         if save_accuracies_to_file is not None:
             np.save(save_accuracies_to_file,self.accuracies)
