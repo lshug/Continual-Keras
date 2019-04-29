@@ -103,7 +103,7 @@ class ContinualClassifierEvaluator():
             FWT+=accuracies[i,i] - self.classifier.evaluate(tasks[i],labels[i],i)[1]
         FWT = FWT/(len(tasks)-1)    
         self.classifier.model.set_weights(trained_weights)
-        prints('Metrics on {} set:'.format('test' if on_test else 'training'))
+        print('Metrics on {} set:'.format('test' if on_test else 'training'))
         print('AAC: {} \n BWT: {} \n FWT: {}'.format(ACC,BWT,FWT))
         if save_accuracies_to_file is not None:
             np.save(save_accuracies_to_file,self.accuracies)
