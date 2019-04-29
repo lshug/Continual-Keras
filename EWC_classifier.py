@@ -7,8 +7,8 @@ import keras.backend as K
 from sklearn.utils import shuffle
 from tqdm import tqdm
 
-def categorical_nll(y, logs):
-    return -1*K.mean(tf.boolean_mask(logs,y))
+def categorical_nll(y, x):
+    return -1*K.mean(tf.boolean_mask(tf.log(x),y))
 
 class EWCClassifier(ContinualClassifier):
     def __init__(self, shape, optimizer='adam', lr=0.0005, epochs=150, metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
@@ -57,8 +57,8 @@ class EWCClassifier(ContinualClassifier):
         fisher_estimates = []
         for i in range(0,len_weights):
             fisher_estimates.append(np.zeros_like(model.get_weights()[i]))
-        x = Lambda(lambda l: K.log(l))(model.output)
-        wrapped_model = Model(model.input,x)
+        #x = Lambda(lambda l: K.log(l))(model.output)
+        wrapped_model = Model(model.input,model.output)
         wrapped_model.compile(loss=categorical_nll,optimizer=self.optimizer,metrics=self.metrics)
         X,Y = shuffle(X,Y)
         fisher_n = self.fisher_n
@@ -90,7 +90,7 @@ class EWCClassifier(ContinualClassifier):
             fisher_estimates[i]=fisher_estimates[i]/fisher_n
         
         self.modes.append(model.get_weights())
-        #Even if online, precision is stored separately after every task. Not very memory efficient, but this requires less coding desu :3
+        #Even if online, precision and mean are stored separately after every task. Not very memory efficient, but this requires less coding desu :3
         if self.gamma is not None and self.task_count>0:
             prev_prec = self.precisions[-1]
             for i in range(0,len_weights):
