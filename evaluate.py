@@ -37,7 +37,19 @@ def divide_dataset_into_tasks(X,Y,T):
         i+=per_task
     return tasks, labels
 
-
+def split_train_test(tasks,labels,fraction=0.2):
+    new_tasks = []
+    new_labels = []
+    test_tasks = []
+    test_labels = []
+    for i in range(len(tasks)):
+        last_n=int(tasks[i].shape[0]*fraction)
+        new_tasks.append(tasks[i][0:last_n])
+        new_labels.append(labels[i][0:last_n])
+        test_tasks.append(tasks[i][last_n:])
+        new_labels.append(labels[i][last_n:])        
+    return new_tasks,new_labels,test_tasks,test_labels
+    
 class ContinualClassifierEvaluator():
     def __init__(self, classifier, tasks, labels, test_tasks=None, test_labels=None):
         self.classifier=classifier
@@ -62,7 +74,7 @@ class ContinualClassifierEvaluator():
                 if self.test_available:
                     self.test_accuracies[i,j] = self.classifier.evaluate(self.test_tasks[j],self.test_labels[j],j)[1]
     
-    def evaluate(self,save_accuracies_to_file=None,on_test=False):
+    def evaluate(self,on_test=False,save_accuracies_to_file=None,):
         tasks = self.tasks
         labels = self.labels
         accuracies = self.accuracies

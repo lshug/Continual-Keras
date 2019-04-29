@@ -11,7 +11,7 @@ from evaluate import ContinualClassifierEvaluator, divide_dataset_into_tasks
 from EWC_classifier import EWCClassifier
 from keras.datasets import mnist
 import os
-from permute_mnist import get_permute_mnist_tasks
+from permute_mnist import get_permute_mnist_tasks, split_train_test
 
 task ='permnist'
 
@@ -25,8 +25,10 @@ if task is 'mnist':
 if task is 'permnist':
     tasks, labels = get_permute_mnist_tasks(20,1000)
 
+tasks, labels, test_tasks, test_labels = split_train_test(tasks,labels)
 
 ewc = EWCClassifier((tasks[0].shape[1],),fisher_n=3000,epochs=5,batch=20,ewc_lambda=3,lr=0.1,optimizer='sgd',model={'layers':2, 'units':100,'dropout':0,'activation':'relu'})
-evaluator = ContinualClassifierEvaluator(ewc, tasks, labels)
+evaluator = ContinualClassifierEvaluator(ewc, tasks, labels, test_tasks, test_labels)
 evaluator.train(verbose=1)
 evaluator.evaluate(save_accuracies_to_file='accuracies.npy')
+evaluator.evaluate(True,save_accuracies_to_file='test_accuracies.npy',)
