@@ -44,10 +44,10 @@ def split_train_test(tasks,labels,fraction=0.2):
     test_labels = []
     for i in range(len(tasks)):
         last_n=int(tasks[i].shape[0]*fraction)
-        new_tasks.append(tasks[i][0:last_n])
-        new_labels.append(labels[i][0:last_n])
-        test_tasks.append(tasks[i][last_n:])
-        test_labels.append(labels[i][last_n:])        
+        new_tasks.append(tasks[i][last_n:])
+        new_labels.append(labels[i][last_n:])
+        test_tasks.append(tasks[i][0:last_n])
+        test_labels.append(labels[i][0:last_n])        
     return new_tasks,new_labels,test_tasks,test_labels
     
 class ContinualClassifierEvaluator():
@@ -58,7 +58,7 @@ class ContinualClassifierEvaluator():
         self.accuracies = np.zeros((len(tasks),len(tasks)))
         self.test_available = False
         if test_tasks is not None:
-            self.test_available = False
+            self.test_available = True
             if len(test_tasks) is not len(tasks):
                 raise Exception('Training and testing task numbers do no match')
             self.test_tasks = test_tasks
