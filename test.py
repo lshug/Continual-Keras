@@ -7,7 +7,7 @@ import pandas as pd
 from keras.utils import to_categorical
 import cv2
 import tensorflow as tf
-from evaluate import ContinualClassifierEvaluator, divide_dataset_into_tasks,split_train_test
+from classification_evaluator import ContinualClassifierEvaluator, divide_dataset_into_tasks,split_train_test
 from EWC_classifier import EWCClassifier
 from keras.datasets import mnist
 import os
