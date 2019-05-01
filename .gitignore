@@ -1,2 +1,4 @@
 __pycache__/
 vowels/
+accuracies.npy
+test_accuracies.npy

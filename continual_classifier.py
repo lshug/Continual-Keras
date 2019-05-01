@@ -67,14 +67,14 @@ class ContinualClassifier(ABC):
     
     def task_fit(self, X, Y, task=None, validation_data=None, verbose=0):
         new_task = False
-        if task is 0 or task is fitted_tasks+1:
-            fitted_tasks+=1
+        if task is 0 or task is None or task is self.fitted_tasks:
+            self.fitted_tasks+=1
             new_task = True
         else:
            raise Exception('Task numbers must be sequential without any gaps (e.g. task 6 cannot follow immediately after task 4)')
         if not self.singleheaded:
             if task is None:
-                raise Exception('Task number should be provided in task_fit if the model is not singleheaded')
+                task = self.fitted_tasks
             Y=Y[:,np.sum(Y,0)!=0]
             try:
                 model = self.task_model(task)
@@ -99,7 +99,7 @@ class ContinualClassifier(ABC):
                 task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
                 self.models.append(task_Model)
                 model = task_Model
-        return self.task_model(task).evaluate(X,Y,verbose)
+        return self.task_model(task).evaluate(X,Y,batch_size=self.batch,verbose=verbose)
         
 #    @abstractmethod
     def load_model(self, filename):
