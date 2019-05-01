@@ -109,7 +109,7 @@ action_size = env.action_space.n
 model = Sequential()
 model.add(Dense(48, input_dim=state_size, activation='relu'))
 model.add(Dense(48, activation='relu'))
-model.add(Dense(action_size, activation='linear'))
+model.add(Dense(action_size)
 model.compile(loss='mse', optimizer=Adam(lr=0.001))
 
 

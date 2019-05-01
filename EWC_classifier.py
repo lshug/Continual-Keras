@@ -11,7 +11,7 @@ def categorical_nll(y, x):
     return -1*K.mean(tf.boolean_mask(tf.log(x),y))
 
 class EWCClassifier(ContinualClassifier):
-    def __init__(self, shape, optimizer='adam',batch=32, lr=0.0005, epochs=150, metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
+    def __init__(self, shape, optimizer='adam', loss=categorical_nll,batch=32, lr=0.0005, epochs=150, metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
         self.ewc_lambda = ewc_lambda
         self.modes = []
         self.precisions = []
@@ -28,10 +28,10 @@ class EWCClassifier(ContinualClassifier):
     def load_model(self, filename):
         pass
     
-    def task_fit_method(self, X, Y, model, validation_data=None, verbose=2):
+    def task_fit_method(self, X, Y, model, new_task, validation_data=None, verbose=2):
         i = 0
         j = 0
-        while True:
+        while new_task:
             try:
                 l = self.model.get_layer(index=i)
                 if len(l.trainable_weights)>0:
@@ -43,9 +43,10 @@ class EWCClassifier(ContinualClassifier):
             except:
                 break
         model.fit(X,Y,epochs = self.epochs, batch_size=self.batch, verbose=verbose, validation_data = validation_data, shuffle=True)
-        self.estimate_fisher(X,Y)
+        if new_task:
+            self.estimate_fisher(X,Y)
     
-    def estimate_fisher(self,X,Y):
+    def estimate_fisher(self,X,Y=None):
         if self.singleheaded:
             model = self.model
         else:
@@ -59,24 +60,27 @@ class EWCClassifier(ContinualClassifier):
         #x = Lambda(lambda l: K.log(l))(model.output)
         wrapped_model = Model(model.input,model.output)
         wrapped_model.compile(loss=categorical_nll,optimizer=self.optimizer,metrics=self.metrics)
-        X,Y = shuffle(X,Y)
+        
         fisher_n = self.fisher_n
         if self.fisher_n is 0 or self.fisher_n>X.shape[0]:
             fisher_n = X.shape[0]
         
         X=X[0:fisher_n]
-        if self.empirical is False:            
+        if self.empirical is False:
+            X = np.random.permutation(X)
             label=wrapped_model.predict(X)
+            label = np.squeeze(np.eye(label.shape[1])[np.argmax(label,-1).reshape(-1)])
         else:
+            X,Y = shuffle(X,Y)
             label=Y[0:fisher_n]
             
         #for each x,y pair, count the gradient with respect to the loss.
         gradients = []
         sess=K.get_session()
-        y_placeholder = tf.placeholder(tf.float32, shape=Y[0].shape)
+        y_placeholder = tf.placeholder(tf.float32, shape=label[0].shape)
         grads_tesnor = K.gradients(categorical_nll(y_placeholder,wrapped_model.output),wrapped_model.trainable_weights)
         for i in tqdm(range(fisher_n)):
-            gradients.append(sess.run(grads_tesnor, feed_dict={y_placeholder:Y[i],wrapped_model.input:np.array([X[i]])}))
+            gradients.append(sess.run(grads_tesnor, feed_dict={y_placeholder:label[i],wrapped_model.input:np.array([X[i]])}))
         
         
         

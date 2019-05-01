@@ -51,12 +51,13 @@ def split_train_test(tasks,labels,fraction=0.2):
     return new_tasks,new_labels,test_tasks,test_labels
     
 class ContinualClassifierEvaluator():
-    def __init__(self, classifier, tasks, labels, test_tasks=None, test_labels=None):
+    def __init__(self, classifier, tasks, labels, test_tasks=None, test_labels=None,task_order=None):
         self.classifier=classifier
         self.tasks=tasks
         self.labels=labels
         self.accuracies = np.zeros((len(tasks),len(tasks)))
         self.test_available = False
+        self.task_order = task_order
         if test_tasks is not None:
             self.test_available = True
             if len(test_tasks) is not len(tasks):
@@ -66,7 +67,8 @@ class ContinualClassifierEvaluator():
             self.test_accuracies = np.zeros((len(tasks),len(tasks)))
     
     def train(self,verbose=2):
-        for i in range(len(self.tasks)):
+        task_indices = range(len(self.tasks)) if self.task_order is None else self.task_order
+        for i in task_indices:
             print('Training on task %d'%i)
             self.classifier.task_fit(self.tasks[i],self.labels[i],i,verbose=verbose)
             for j in range(len(self.tasks)):
