@@ -21,8 +21,10 @@ class ContinualClassifier(ABC):
     AdamW. Any loss and any activation from keras api can be used.
     If singleheaded_classes is None, models are stored in self.models.
     """
-    def __init__(self, shape, optimizer='adam', lr=0.001, epochs=200, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
+    def __init__(self, shape, optimizer='adam',batch=32, lr=0.001, epochs=200, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
+        self.fitted_tasks = 0
         self.epochs = epochs
+        self.batch=batch
         optim = Adam(lr)
         if optimizer is 'sgd':
             optim = SGD(lr)
@@ -49,7 +51,7 @@ class ContinualClassifier(ABC):
             self.model=model
             
 #    @abstractmethod
-    def task_fit_method(self, X, Y, model, validation_data=None, verbose=0):
+    def task_fit_method(self, X, Y, new_task, model, validation_data=None, verbose=0):
         print('No task fit method')
         
         
@@ -64,9 +66,15 @@ class ContinualClassifier(ABC):
             return self.models[task]
     
     def task_fit(self, X, Y, task=None, validation_data=None, verbose=0):
+        new_task = False
+        if task is 0 or task is None or task is self.fitted_tasks:
+            self.fitted_tasks+=1
+            new_task = True
+        else:
+           raise Exception('Task numbers must be sequential without any gaps (e.g. task 6 cannot follow immediately after task 4)')
         if not self.singleheaded:
             if task is None:
-                raise Exception('Task number should be provided in task_fit if the model is not singleheaded')
+                task = self.fitted_tasks
             Y=Y[:,np.sum(Y,0)!=0]
             try:
                 model = self.task_model(task)
@@ -76,9 +84,9 @@ class ContinualClassifier(ABC):
                 task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
                 self.models.append(task_Model)
                 model = task_Model
-        self.task_fit_method(X,Y,model,validation_data,verbose)
+        self.task_fit_method(X,Y,model,new_task,validation_data,verbose)
     
-    def evaluate(self,X,Y,task=None):
+    def evaluate(self,X,Y,task=None,verbose=0):
         if not self.singleheaded:
             if task is None:
                 raise Exception('Task number should be provided in evaluate if the model is not singleheaded')
@@ -91,7 +99,7 @@ class ContinualClassifier(ABC):
                 task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
                 self.models.append(task_Model)
                 model = task_Model
-        return self.task_model(task).evaluate(X,Y)
+        return self.task_model(task).evaluate(X,Y,batch_size=self.batch,verbose=verbose)
         
 #    @abstractmethod
     def load_model(self, filename):

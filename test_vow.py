@@ -7,7 +7,7 @@ import pandas as pd
 from keras.utils import to_categorical
 import cv2
 import tensorflow as tf
-from evaluate import ContinualClassifierEvaluator, divide_dataset_into_tasks
+from classification_evaluator import ContinualClassifierEvaluator, divide_dataset_into_tasks
 from EWC_classifier import EWCClassifier
 from keras.datasets import mnist
 import os
@@ -48,7 +48,7 @@ def get_hindi_tasks(path = 'vowels'): # vowels or numerals
     num_labels = []
     for num, val in enumerate(labels):
       num_labels.append(num)
-      
+
     folders = [i+1 for i in num_labels] # adding ones, since folders are arranged from 1-12
 
     X = []
@@ -64,7 +64,7 @@ def get_hindi_tasks(path = 'vowels'): # vowels or numerals
     X = np.array(X)
     y = np.array(y)
 
-    
+
 
     #X = np.split(X, 4)
     #y = to_categorical(y)
@@ -82,7 +82,7 @@ tasks, labels = divide_dataset_into_tasks(X,y_train,6)
 
 
 print(X.shape)
-ewc = EWCClassifier((X.shape[1],),fisher_n=3000,epochs=10,ewc_lambda=500)
+ewc = EWCClassifier((X.shape[1],),fisher_n=3000,epochs=10,ewc_lambda=200, lr=0.00005)
 evaluator = ContinualClassifierEvaluator(ewc, tasks, labels)
 evaluator.train()
 evaluator.evaluate()
