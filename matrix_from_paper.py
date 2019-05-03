@@ -32,11 +32,14 @@ m = b.split('\n')
 m = [i.split(' ') for i in m]
 m = [[float(i) for i in l] for l in m]
 m = np.array(m)
-accuracies = m
-tasks = m.shape[0]
-AAC = np.sum(accuracies[-1])/tasks
-BWT = 0
-for i in range(tasks-1):
-    BWT+=(accuracies[-1][i] - accuracies[i][i])
-BWT = BWT/(tasks-1)
-slope_metric = rate_matrix(accuracies)
+print(m.shape)
+for i in range(3,m.shape[0]):
+    accuracies = m[:i,:i]
+    tasks = accuracies.shape[0]
+    AAC = np.sum(accuracies[-1])/tasks
+    BWT = 0
+    for i in range(tasks-1):
+        BWT+=(accuracies[-1][i] - accuracies[i][i])
+    BWT = BWT/(tasks-1)
+    slope_metric = rate_matrix(accuracies)
+    print('AAC: {}\nBWT: {}\nFWT: {}\nAngle metric: {}'.format(AAC,BWT,'𓂸',slope_metric))

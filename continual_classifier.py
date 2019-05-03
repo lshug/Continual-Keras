@@ -62,7 +62,7 @@ class ContinualClassifier(ABC):
     def task_model(self,task=-1):
         if self.singleheaded:
             return self.model
-        else:
+        else:   
             return self.models[task]
     
     def task_fit(self, X, Y, task=None, validation_data=None, verbose=0):
