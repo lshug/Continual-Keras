@@ -8,12 +8,12 @@ from sklearn.utils import shuffle
 from tqdm import tqdm
 
 def categorical_nll(y, x):
-    return -1*K.mean(tf.boolean_mask(tf.log(x),y))
+    return -1*tf.reduce_mean(tf.boolean_mask(tf.log(x),y))
 
 class EWCClassifier(ContinualClassifier):
     def __init__(self, shape, optimizer='adam', loss=categorical_nll,batch=32, lr=0.0005, epochs=150, metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
         self.ewc_lambda = ewc_lambda
-        self.modes = []
+        self.means = []
         self.precisions = []
         self.task_count = 0
         self.fisher_n=fisher_n
@@ -31,20 +31,31 @@ class EWCClassifier(ContinualClassifier):
     def task_fit_method(self, X, Y, model, new_task, validation_data=None, verbose=2):
         i = 0
         j = 0
-        while new_task:
+        while new_task:            
             try:
                 l = self.model.get_layer(index=i)
-                if len(l.trainable_weights)>0:
-                    l.bias_regularizer=EWC(j)
-                    j+=1
-                    l.kernel_regularizer=EWC(j)
-                    j+=1
-                i+=1
             except:
                 break
+            if len(l.trainable_weights)>0:
+                l.add_loss(self.EWC(j)(l.kernel))
+                j+=1
+                l.add_loss(self.EWC(j)(l.bias))
+                j+=1
+            i+=1
+        model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
         model.fit(X,Y,epochs = self.epochs, batch_size=self.batch, verbose=verbose, validation_data = validation_data, shuffle=True)
         if new_task:
             self.estimate_fisher(X,Y)
+            i = 0
+            while new_task:            
+                try:
+                    l = self.model.get_layer(index=i)
+                except:
+                    break
+                if len(l.trainable_weights)>0:
+                    l._losses=[]
+                i+=1
+            model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
     
     def estimate_fisher(self,X,Y=None):
         if self.singleheaded:
@@ -91,9 +102,9 @@ class EWCClassifier(ContinualClassifier):
         for i in range(0,len_weights):
             fisher_estimates[i]=fisher_estimates[i]/fisher_n
         
-        self.modes.append(model.get_weights())
+        self.means.append(model.get_weights())
         #Even if online, precision and mean are stored separately after every task. Not very memory efficient, but this requires less coding desu :3
-        if self.gamma is not None and self.task_count>0:
+        if self.gamma is not 0 and self.task_count>0:
             prev_prec = self.precisions[-1]
             for i in range(0,len_weights):
                 fisher_estimates[i]+=prev_prec[i]*self.gamma
@@ -101,20 +112,20 @@ class EWCClassifier(ContinualClassifier):
         self.precisions.append(fisher_estimates)
         
         self.task_count+=1
-        if self.gamma is not None:
+        if self.gamma is not 0:
             self.task_count=1
         
             
     
     def EWC(self,weight_no):
-        mean = self.means[-1][weight_no]
-        prec = self.precisions[-1][weight_no]
-        gamma = self.gamma
         task_count = self.task_count
         if task_count is 0:
             def ewc_reg(weights):
                 return 0
             return ewc_reg
+        mean = self.means[-1][weight_no]
+        prec = self.precisions[-1][weight_no]
+        gamma = self.gamma
         if gamma is not 0:
             def ewc_reg(weights):
                 return self.ewc_lambda*0.5*K.sum((gamma*prec) * (weights-mean)**2)
@@ -123,9 +134,9 @@ class EWCClassifier(ContinualClassifier):
             loss_total = None
             for i in range(task_count):
                 if loss_total is None:
-                    loss_total=self.EWC_lambda*0.5*K.sum((prec[i][weight_no]) * (weights-self.means[i][weight_no])**2)
+                    loss_total=self.ewc_lambda*0.5*K.sum((self.precisions[i][weight_no]) * (weights-self.means[i][weight_no])**2)
                 else:
-                    loss_total+=self.EWC_lambda*0.5*K.sum((prec[i][weight_no]) * (weights-self.means[i][weight_no])**2)
+                    loss_total+=self.ewc_lambda*0.5*K.sum((self.precisions[i][weight_no]) * (weights-self.means[i][weight_no])**2)
             return loss_total
         return ewc_reg
         
