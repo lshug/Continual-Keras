@@ -7,7 +7,8 @@ import pandas as pd
 from keras.utils import to_categorical
 import cv2
 import tensorflow as tf
-from classification_evaluator import ContinualClassifierEvaluator, divide_dataset_into_tasks
+from classification_evaluator import ContinualClassifierEvaluator
+from utils import divide_dataset_into_tasks
 from EWC_classifier import EWCClassifier
 from keras.datasets import mnist
 import os
@@ -81,8 +82,8 @@ X = X.reshape([X.shape[0], X.shape[1]**2])
 tasks, labels = divide_dataset_into_tasks(X,y_train,6)
 
 
-print(X.shape)
-ewc = EWCClassifier((X.shape[1],),fisher_n=3000,epochs=10,ewc_lambda=200, lr=0.00005)
-evaluator = ContinualClassifierEvaluator(ewc, tasks, labels)
-evaluator.train()
+#print(X.shape)
+#ewc = EWCClassifier((X.shape[1],),fisher_n=3000,epochs=10,ewc_lambda=200, lr=0.00005)
+#evaluator = ContinualClassifierEvaluator(ewc, tasks, labels)
+#evaluator.train()
 evaluator.evaluate()

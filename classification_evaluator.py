@@ -47,7 +47,7 @@ class ContinualClassifierEvaluator():
             labels = self.test_labels
             accuracies = self.test_accuracies
         
-        ACC = np.sum(accuracies[-1])/len(tasks)
+        AAC = np.sum(accuracies[-1])/len(tasks)
         
         BWT = 0
         for i in range(len(tasks)-1):
@@ -69,8 +69,9 @@ class ContinualClassifierEvaluator():
         slope_metric = rate_matrix(accuracies)
         
         print('Metrics on {} set:'.format('test' if on_test else 'training'))
-        print('AAC: {}\nBWT: {}\nFWT: {}\nAngle metric: {}'.format(ACC,BWT,FWT,slope_metric))
+        print('AAC: {}\nBWT: {}\nFWT: {}\nAngle metric: {}'.format(AAC,BWT,FWT,slope_metric))
         if save_accuracies_to_file is not None:
             np.save(save_accuracies_to_file,self.accuracies)
-        
+            
+        return AAC, BWT, FWT, slope_metric
 

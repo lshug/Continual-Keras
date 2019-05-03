@@ -10,6 +10,29 @@ def generate_test_data():
     Y = np.array([0]*10 + [1]*10 +[2]*10 + [3]*10 + [4]*10 + [5]*10 + [6]*10 + [7]*10 + [8]*10 + [9]*10)
     return X,Y
 
+def load_vowels(path='vowels'):
+    # enumerating labels, original values can be retrieved by indexing the 'labels' array
+    if path == "vowels":
+        labels = ['a', 'aa', 'i', 'ee',  'u', 'oo', 'ae', 'ai', 'o', 'au', 'an', 'ah']
+    num_labels = []
+    for num, val in enumerate(labels):
+      num_labels.append(num)
+    folders = [i+1 for i in num_labels] # adding ones, since folders are arranged from 1-12
+    X = []
+    y = []
+    for f in folders:
+      abs_path = os.path.join(path, str(f))
+      for img in os.listdir(abs_path):
+        X.append(cv2.imread(os.path.join(abs_path, img), cv2.IMREAD_GRAYSCALE))
+        y.append(f - 1) # converting fodler value to original label val
+    X = np.array(X)
+    y = np.array(y)
+
+    # normalizing the input data modify if necessary
+    X = tf.keras.utils.normalize(X, axis = 1).reshape(X.shape[0],-1)
+    y = to_categorical(y)
+    return X, y
+
 
 def divide_dataset_into_tasks(X,Y,T):
     Y_categorical = to_categorical(Y)
@@ -64,10 +87,15 @@ def get_permute_mnist_tasks(task_no,samples_per_task=60000):
     tasks.append(x_train)
     labels = []
     labels.append(y_train)
+    def make_y(row, task):
+        emp = np.zeros(10*task_no)
+        emp[task*10:task*10+10] = row
+        return emp
     for i in tqdm(range(task_no-1)):
         mask = np.random.permutation(784)
         tasks.append(np.apply_along_axis(lambda x: x[mask],1,x_train))
-        labels.append(y_train)
+        y_train_expanded = np.apply_along_axis(make_y,1,y_train,i)
+        labels.append(y_train_expanded)
     return tasks, labels
 
     

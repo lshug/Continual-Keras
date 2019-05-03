@@ -84,6 +84,8 @@ class ContinualClassifier(ABC):
                 task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
                 self.models.append(task_Model)
                 model = task_Model
+        else:
+            model = self.task_model(task)
         self.task_fit_method(X,Y,model,new_task,validation_data,verbose)
     
     def evaluate(self,X,Y,task=None,verbose=0):
