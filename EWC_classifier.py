@@ -31,31 +31,13 @@ class EWCClassifier(ContinualClassifier):
     def task_fit_method(self, X, Y, model, new_task, validation_data=None, verbose=2):
         i = 0
         j = 0
-        while new_task:            
-            try:
-                l = self.model.get_layer(index=i)
-            except:
-                break
-            if len(l.trainable_weights)>0:
-                l.add_loss(self.EWC(j)(l.kernel))
-                j+=1
-                l.add_loss(self.EWC(j)(l.bias))
-                j+=1
-            i+=1
+        if new_task:
+            self.inject_regularization(self.EWC)
         model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
         model.fit(X,Y,epochs = self.epochs, batch_size=self.batch, verbose=verbose, validation_data = validation_data, shuffle=True)
         if new_task:
             self.estimate_fisher(X,Y)
-            i = 0
-            while new_task:            
-                try:
-                    l = self.model.get_layer(index=i)
-                except:
-                    break
-                if len(l.trainable_weights)>0:
-                    l._losses=[]
-                i+=1
-            model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
+            
     
     def estimate_fisher(self,X,Y=None):
         if self.singleheaded:

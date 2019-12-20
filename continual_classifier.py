@@ -31,6 +31,7 @@ class ContinualClassifier(ABC):
         self.optimizer = optim
         self.loss = loss
         self.metrics = metrics
+        self.regularizer_loaded = False
         if isinstance(model,dict):
             inp = Input(shape,name='inputlayer')
             x = inp
@@ -87,6 +88,9 @@ class ContinualClassifier(ABC):
         else:
             model = self.task_model(task)
         self.task_fit_method(X,Y,model,new_task,validation_data,verbose)
+        if self.regularizer_loaded:
+            self.clean_up_regularization()
+            
     
     def evaluate(self,X,Y,task=None,verbose=0):
         if not self.singleheaded:
@@ -102,6 +106,34 @@ class ContinualClassifier(ABC):
                 self.models.append(task_Model)
                 model = task_Model
         return self.task_model(task).evaluate(X,Y,batch_size=self.batch,verbose=verbose)
+    
+    def inject_regularization(regularizer_generator):
+        self.regularizer_loaded = True
+        i = 0
+        j = 0
+        while True:            
+            try:
+                l = self.model.get_layer(index=i)
+            except:
+                break
+            for k in l.trainable_weights:
+                l.add_loss(regularizer_generator(j)(k))
+                j+=1
+                l.add_loss(regularizer_generator(j)(k))
+                j+=1                
+            i+=1
+            
+    def clean_up_regularization():
+        i = 0
+        while True:            
+            try:
+                l = self.model.get_layer(index=i)
+            except:
+                break
+            if len(l.trainable_weights)>0:
+                l._losses=[]
+            i+=1
+        model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
         
 #    @abstractmethod
     def load_model(self, filename):
