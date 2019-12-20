@@ -100,11 +100,7 @@ class ContinualClassifier(ABC):
             try:
                 model = self.task_model(task)
             except:
-                x = Dense(Y.shape[1],activation='softmax',name='output_task%d'%(len(self.models)+1))(self.model.output)
-                task_Model = Model(self.model.input,x)
-                task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
-                self.models.append(task_Model)
-                model = task_Model
+                print('Could not retrive the head for task %d.'%task)
         return self.task_model(task).evaluate(X,Y,batch_size=self.batch,verbose=verbose)
     
     def inject_regularization(regularizer_generator):

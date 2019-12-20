@@ -105,13 +105,15 @@ class EWCClassifier(ContinualClassifier):
             def ewc_reg(weights):
                 return 0
             return ewc_reg
-        mean = self.means[-1][weight_no]
-        prec = self.precisions[-1][weight_no]
-        gamma = self.gamma
-        if gamma is not 0:
+        
+        if self.gamma is not 0:
+            mean = self.means[-1][weight_no]
+            prec = self.precisions[-1][weight_no]
+            gamma = self.gamma
             def ewc_reg(weights):
                 return self.ewc_lambda*0.5*K.sum((gamma*prec) * (weights-mean)**2)
             return ewc_reg
+        
         def ewc_reg(weights):
             loss_total = None
             for i in range(task_count):
