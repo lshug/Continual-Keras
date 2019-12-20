@@ -79,10 +79,10 @@ class EWCClassifier(ContinualClassifier):
         
         for i in tqdm(range(fisher_n)):
             for j in range(len_weights):
-                fisher_estimates[j]+=gradients[i][j]**2
+                fisher_estimates[j]+=gradients[i][j]**2  #Since we're only going to use the diagonal of Fisher, rather than calculate the whole outer product we can get just the diagonal by squaring each element of the gradient. 
         
         for i in range(0,len_weights):
-            fisher_estimates[i]=fisher_estimates[i]/fisher_n
+            fisher_estimates[i]=fisher_estimates[i]/fisher_n 
         
         self.means.append(model.get_weights())
         #Even if online, precision and mean are stored separately after every task. Not very memory efficient, but this requires less coding desu :3
