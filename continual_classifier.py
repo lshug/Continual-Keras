@@ -21,7 +21,7 @@ class ContinualClassifier(ABC):
     AdamW. Any loss and any activation from keras api can be used.
     If singleheaded_classes is None, models are stored in self.models.
     """
-    def __init__(self, shape, optimizer='sgd',lr=0.001, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
+    def __init__(self, shape, optimizer='sgd',lr=0.001, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None,  model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
         self.fitted_tasks = 0
         optim = Adam(lr)
         if optimizer is 'sgd':
@@ -107,6 +107,17 @@ class ContinualClassifier(ABC):
             except:
                 print('Could not retrive the head for task %d.'%task)
         return self.task_model(task).evaluate(X,Y,batch_size=batch_size,verbose=verbose)
+    
+    def predict(self,X,task=None,batch_size=32,verbose=0):
+        if not self.singleheaded:
+            if task is None:
+                raise Exception('Task number should be provided in evaluate if the model is not singleheaded')
+            Y=Y[:,np.sum(Y,0)!=0]
+            try:
+                model = self.task_model(task)
+            except:
+                print('Could not retrive the head for task %d.'%task)
+        return self.task_model(task).predict(X,batch_size=batch_size,verbose=verbose)
     
     def inject_regularization(self,regularizer_generator):
         self.regularizer_loaded = True

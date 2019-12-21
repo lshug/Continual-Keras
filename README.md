@@ -1,6 +1,9 @@
 # Continual-Keras
-Keras implementations of various continual learning methods, to be later used in a unified testing/evaluation framework. 
+Keras-based framework for implementing continual learning continual learning methods.
 
 #### Methods implemented so far:
-- EWC. Most of the implementation details are based around [GMvandeVen's pyTorch continual learning framework](https://github.com/GMvandeVen/continual-learning).
+- EWC
+- Progress & Compress
+
+
 
