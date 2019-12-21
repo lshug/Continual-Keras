@@ -46,7 +46,7 @@ class DQNAgent:
     
 Task_1_avg_scores = []
 Task_2_avg_scores = []
-
+#
 def train_agent_in_env(agent, env, train_steps = 2000, distortion = 0, enable = True):
     agent.memory_clear()
     state_size = env.observation_space.shape[0]
@@ -57,7 +57,7 @@ def train_agent_in_env(agent, env, train_steps = 2000, distortion = 0, enable = 
     state = np.reshape(state, [1, state_size]) # Dist
     score = 0
     for time in range(train_steps):
-        if (enable):
+            if (enable):
             env2 = gym.make('CartPole-v1')
             Task_1_avg_scores.append(test_agent_in_env(agent, env2, test_episodes = 10, distortion = [-2.4, -1, -0.20943951, -1]))
             Task_2_avg_scores.append(test_agent_in_env(agent, env2, test_episodes = 10, distortion = [+2.4, +1, +0.20943951, +1]))
