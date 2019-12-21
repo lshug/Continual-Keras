@@ -1,4 +1,5 @@
 from continual_classifier import ContinualClassifier
+from keras.losses import categorical_crossentropy
 import numpy as np
 from keras.models import Model
 from keras.layers import Lambda
@@ -11,7 +12,7 @@ def categorical_nll(y, x):
     return -1*tf.reduce_mean(tf.boolean_mask(tf.log(x),y))
 
 class EWCClassifier(ContinualClassifier):
-    def __init__(self, shape, optimizer='adam', loss=categorical_nll,batch=32, lr=0.0005, epochs=150, metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
+    def __init__(self, shape, optimizer='adam', loss='categorical_crossentropy',lr=0.0005, metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}, ewc_lambda=500, fisher_n=0, empirical=False, gamma=0):
         self.ewc_lambda = ewc_lambda
         self.means = []
         self.precisions = []
@@ -19,7 +20,7 @@ class EWCClassifier(ContinualClassifier):
         self.fisher_n=fisher_n
         self.empirical=empirical
         self.gamma=gamma
-        super().__init__(shape,optimizer,batch,lr,epochs,categorical_nll,metrics,singleheaded_classes,model)
+        super().__init__(shape,optimizer,lr,loss,metrics,singleheaded_classes,model)
     
     def save_model(self, filename):
         pass
@@ -28,13 +29,13 @@ class EWCClassifier(ContinualClassifier):
     def load_model(self, filename):
         pass
     
-    def task_fit_method(self, X, Y, model, new_task, validation_data=None, verbose=2):
+    def task_fit_method(self, X, Y, model, new_task, batch_size, epochs, validation_data=None, verbose=2):
         i = 0
         j = 0
         if new_task:
             self.inject_regularization(self.EWC)
         model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
-        model.fit(X,Y,epochs = self.epochs, batch_size=self.batch, verbose=verbose, validation_data = validation_data, shuffle=True)
+        model.fit(X,Y, batch_size=batch_size, epochs=epochs, validation_data = validation_data, verbose=verbose, shuffle=True)
         if new_task:
             self.estimate_fisher(X,Y)
             
@@ -52,7 +53,7 @@ class EWCClassifier(ContinualClassifier):
             fisher_estimates.append(np.zeros_like(model.get_weights()[i]))
         #x = Lambda(lambda l: K.log(l))(model.output)
         wrapped_model = Model(model.input,model.output)
-        wrapped_model.compile(loss=categorical_nll,optimizer=self.optimizer,metrics=self.metrics)
+        wrapped_model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
         
         fisher_n = self.fisher_n
         if self.fisher_n is 0 or self.fisher_n>X.shape[0]:
@@ -71,7 +72,7 @@ class EWCClassifier(ContinualClassifier):
         gradients = []
         sess=K.get_session()
         y_placeholder = tf.placeholder(tf.float32, shape=label[0].shape)
-        grads_tesnor = K.gradients(categorical_nll(y_placeholder,wrapped_model.output),wrapped_model.trainable_weights)
+        grads_tesnor = K.gradients(categorical_crossentropy(y_placeholder,wrapped_model.output),wrapped_model.trainable_weights)
         for i in tqdm(range(fisher_n)):
             gradients.append(sess.run(grads_tesnor, feed_dict={y_placeholder:label[i],wrapped_model.input:np.array([X[i]])}))
         

@@ -21,10 +21,8 @@ class ContinualClassifier(ABC):
     AdamW. Any loss and any activation from keras api can be used.
     If singleheaded_classes is None, models are stored in self.models.
     """
-    def __init__(self, shape, optimizer='adam',batch=32, lr=0.001, epochs=200, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
+    def __init__(self, shape, optimizer='sgd',lr=0.001, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
         self.fitted_tasks = 0
-        self.epochs = epochs
-        self.batch=batch
         optim = Adam(lr)
         if optimizer is 'sgd':
             optim = SGD(lr)
@@ -46,13 +44,20 @@ class ContinualClassifier(ABC):
                 self.singleheaded = False
                 self.models = []
             self.model=Model(inp,x)
-            
             self.model.compile(loss=loss,optimizer=optim,metrics=metrics)
         else:
-            self.model=model
+            if singleheaded_classes is not None:
+                x = Dense(singleheaded_classes,activation='softmax',name='singlehead')(x)
+                self.singleheaded = True
+            else:
+                x = model.ouput
+                self.singleheaded = False
+                self.models = []
+            self.model=Model(model.input,x)
+            self.model.compile(loss=loss,optimizer=optim,metrics=metrics)
             
 #    @abstractmethod
-    def task_fit_method(self, X, Y, new_task, model, validation_data=None, verbose=0):
+    def task_fit_method(self, X, Y, new_task, model, batch_size = 32, epochs=200, validation_data=None, verbose=0):
         print('No task fit method')
         
         
@@ -66,7 +71,7 @@ class ContinualClassifier(ABC):
         else:   
             return self.models[task]
     
-    def task_fit(self, X, Y, task=None, validation_data=None, verbose=0):
+    def task_fit(self, X, Y, task=None, batch_size = 32, epochs=200, validation_data=None, verbose=0):
         new_task = False
         if task is 0 or task is None or task is self.fitted_tasks:
             self.fitted_tasks+=1
@@ -87,12 +92,12 @@ class ContinualClassifier(ABC):
                 model = task_Model
         else:
             model = self.task_model(task)
-        self.task_fit_method(X,Y,model,new_task,validation_data,verbose)
+        self.task_fit_method(X,Y,model,new_task,batch_size=batch_size,epochs=epochs,validation_data=validation_data,verbose=verbose)
         if self.regularizer_loaded:
             self.clean_up_regularization()
             
     
-    def evaluate(self,X,Y,task=None,verbose=0):
+    def evaluate(self,X,Y,task=None,batch_size=32,verbose=0):
         if not self.singleheaded:
             if task is None:
                 raise Exception('Task number should be provided in evaluate if the model is not singleheaded')
@@ -101,9 +106,9 @@ class ContinualClassifier(ABC):
                 model = self.task_model(task)
             except:
                 print('Could not retrive the head for task %d.'%task)
-        return self.task_model(task).evaluate(X,Y,batch_size=self.batch,verbose=verbose)
+        return self.task_model(task).evaluate(X,Y,batch_size=batch_size,verbose=verbose)
     
-    def inject_regularization(regularizer_generator):
+    def inject_regularization(self,regularizer_generator):
         self.regularizer_loaded = True
         i = 0
         j = 0
@@ -114,12 +119,10 @@ class ContinualClassifier(ABC):
                 break
             for k in l.trainable_weights:
                 l.add_loss(regularizer_generator(j)(k))
-                j+=1
-                l.add_loss(regularizer_generator(j)(k))
                 j+=1                
             i+=1
             
-    def clean_up_regularization():
+    def clean_up_regularization(self):
         i = 0
         while True:            
             try:
@@ -129,7 +132,7 @@ class ContinualClassifier(ABC):
             if len(l.trainable_weights)>0:
                 l._losses=[]
             i+=1
-        model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
+        self.model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
         
 #    @abstractmethod
     def load_model(self, filename):

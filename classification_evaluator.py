@@ -32,10 +32,12 @@ class ContinualClassifierEvaluator():
             print('Training on task %d'%i)
             self.classifier.task_fit(self.tasks[i],self.labels[i],i,verbose=verbose)
             for j in range(len(self.tasks)):
-                self.accuracies[i,j] = self.classifier.evaluate(self.tasks[j],self.labels[j],j)[1]
-                if self.test_available:
-                    self.test_accuracies[i,j] = self.classifier.evaluate(self.test_tasks[j],self.test_labels[j],j)[1]
-    
+                try:
+                    self.accuracies[i,j] = self.classifier.evaluate(self.tasks[j],self.labels[j],j)[1]
+                    if self.test_available:
+                        self.test_accuracies[i,j] = self.classifier.evaluate(self.test_tasks[j],self.test_labels[j],j)[1]
+                except:
+                    pass
     def evaluate(self,on_test=False,save_accuracies_to_file=None):
         tasks = self.tasks
         labels = self.labels
