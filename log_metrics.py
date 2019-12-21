@@ -4,6 +4,8 @@ from utils import divide_dataset_into_tasks,split_train_test,get_permute_mnist_t
 from EWC_classifier import EWCClassifier
 import os
 
+#extensive test
+
 def do_evals(tasks, labels):
     tasks, labels, test_tasks, test_labels = split_train_test(tasks,labels)
     ewc = EWCClassifier((tasks[0].shape[1],),fisher_n=3000,epochs=5,batch=20,ewc_lambda=3,lr=0.1,optimizer='sgd',model={'layers':2, 'units':100,'dropout':0,'activation':'relu'})

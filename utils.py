@@ -123,7 +123,7 @@ regression model that treats the row-column combinations as X and Y coordinates
 that designate regions on a plane and treats the element size as the number
 of points in a given region. The regression line's intercept is fixed
 at the top left corner of the matrix. The slope is solved for using a 
-normal equation.
+normal equation. See above.
 '''    
 def rate_matrix(m,epsilon=0.01):
     m = np.tril(m)
