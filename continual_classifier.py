@@ -84,9 +84,8 @@ class ContinualClassifier(ABC):
                 task_Model = Model(self.model.input,x)
                 task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
                 self.models.append(task_Model)
-                model = task_Model
-        else:
-            model = self.task_model(task)
+                
+        model = self.task_model(task)
         self.task_fit_method(X,Y,model,new_task,batch_size=batch_size,epochs=epochs,validation_data=validation_data,verbose=verbose)
         if self.regularizer_loaded:
             self.clean_up_regularization()
@@ -100,7 +99,7 @@ class ContinualClassifier(ABC):
             try:
                 model = self.task_model(task)
             except:
-                print('Could not retrive the head for task %d.'%task)
+                raise Exception('Could not retrive the head for task %d.'%task)
         return self.task_model(task).evaluate(X,Y,batch_size=batch_size,verbose=verbose)
     
     def predict(self,X,task=None,batch_size=32,verbose=0):
@@ -111,7 +110,7 @@ class ContinualClassifier(ABC):
             try:
                 model = self.task_model(task)
             except:
-                print('Could not retrive the head for task %d.'%task)
+                raise Exception('Could not retrive the head for task %d.'%task)
         return self.task_model(task).predict(X,batch_size=batch_size,verbose=verbose)
     
     def inject_regularization(self,regularizer_generator):

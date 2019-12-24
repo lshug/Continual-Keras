@@ -1,5 +1,7 @@
 import numpy as np
 from keras.utils import to_categorical
+from keras.losses import categorical_crossentropy
+import keras.backend as K
 import math
 from tqdm import tqdm
 from sklearn.utils import shuffle
@@ -135,3 +137,31 @@ def rate_matrix(m,epsilon=0.01):
     X = np.array(X,dtype=np.float64)
     return slope_reg(X[:,0],X[:,1],m.shape[0]-1)
     
+    
+
+def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None):
+    if len_weights is None:
+        len_weights = len(model.get_weights())
+    fisher_estimates = [np.zeros_like(w) for w in model.get_weights()[0:len_weights]]
+    if fisher_n is 0 or fisher_n>X.shape[0]:
+        fisher_n = X.shape[0]        
+    X=X[0:fisher_n]
+    if Y is None:
+        X = np.random.permutation(X)
+        label = model.predict(X)
+        label = np.squeeze(np.eye(label.shape[1])[np.argmax(label,-1).reshape(-1)])
+    else:
+        X,Y = shuffle(X,Y)
+        label=Y[0:fisher_n]    
+    gradients = []
+    sess=K.get_session()
+    y_placeholder = K.placeholder(dtype='float32', shape=label[0].shape)
+    grads_tesnor = K.gradients(categorical_crossentropy(y_placeholder,model.output),model.trainable_weights)
+    for i in tqdm(range(fisher_n)):
+        gradients.append(sess.run(grads_tesnor, feed_dict={y_placeholder:label[i],model.input:np.array([X[i]])}))       
+    for i in tqdm(range(fisher_n)):
+        for j in range(len_weights):
+            fisher_estimates[j]+=gradients[i][j]**2        
+    for i in range(0,len_weights):
+        fisher_estimates[i]=fisher_estimates[i]/fisher_n 
+    return fisher_estimates

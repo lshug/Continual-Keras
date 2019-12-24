@@ -26,7 +26,7 @@ if task is 'permnist':
     tasks, labels = get_permute_mnist_tasks(5,1250)
 
 tasks, labels, test_tasks, test_labels = split_train_test(tasks,labels)
-ewc = OnlineEWCClassifier(fisher_n=3000,ewc_lambda=50,optimizer='sgd',model={'input_shape':(tasks[0].shape[1],),'layers':2, 'units':100,'dropout':0,'activation':'relu'})
+ewc = EWCClassifier(fisher_n=3000,ewc_lambda=50,optimizer='sgd',model={'input_shape':(tasks[0].shape[1],),'layers':2, 'units':100,'dropout':0,'activation':'relu'})
 evaluator = ContinualClassifierEvaluator(ewc, tasks, labels, test_tasks, test_labels)
 evaluator.train(epochs=100,verbose=1)
 evaluator.evaluate(save_accuracies_to_file='accuracies.npy')
