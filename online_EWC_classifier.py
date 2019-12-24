@@ -8,11 +8,11 @@ import keras.backend as K
 from sklearn.utils import shuffle
 from tqdm import tqdm
 
-class EWCClassifier(ContinualClassifier):
-    def __init__(self, ewc_lambda=1, fisher_n=0, empirical=False, gamma=0, optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}):
+class OnlineEWCClassifier(ContinualClassifier):
+    def __init__(self, ewc_lambda=1, fisher_n=0, empirical=False, gamma=1, optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}):
         self.ewc_lambda = ewc_lambda
-        self.means = []
-        self.precisions = []
+        self.mean = None
+        self.precision = None
         self.task_count = 0
         self.fisher_n=fisher_n
         self.empirical=empirical
@@ -81,18 +81,17 @@ class EWCClassifier(ContinualClassifier):
         for i in range(0,len_weights):
             fisher_estimates[i]=fisher_estimates[i]/fisher_n 
         
-        self.means.append(model.get_weights())
+        self.mean = model.get_weights()
+        
+        #self.means.append(model.get_weights())
         #Even if online, precision and mean are stored separately after every task. Not very memory efficient, but this requires less coding desu :3
-        if self.gamma is not 0 and self.task_count>0:
-            prev_prec = self.precisions[-1]
+        if self.task_count>0:
+            prev_prec = self.precision
             for i in range(0,len_weights):
                 fisher_estimates[i]+=prev_prec[i]*self.gamma
         
-        self.precisions.append(fisher_estimates)
-        
-        self.task_count+=1
-        if self.gamma is not 0:
-            self.task_count=1
+        self.precision = fisher_estimates
+        self.task_count=1
         
             
     
@@ -101,24 +100,14 @@ class EWCClassifier(ContinualClassifier):
         if task_count is 0:
             def ewc_reg(weights):
                 return 0
-            return ewc_reg
-        
+            return ewc_reg        
         if self.gamma is not 0:
-            mean = self.means[-1][weight_no]
-            prec = self.precisions[-1][weight_no]
+            mean = self.mean[weight_no]
+            prec = self.precision[weight_no]
             gamma = self.gamma
             def ewc_reg(weights):
                 return self.ewc_lambda*0.5*K.sum((gamma*prec) * (weights-mean)**2)
             return ewc_reg
-        
-        def ewc_reg(weights):
-            loss_total = None
-            for i in range(task_count):
-                if loss_total is None:
-                    loss_total=self.ewc_lambda*0.5*K.sum((self.precisions[i][weight_no]) * (weights-self.means[i][weight_no])**2)
-                else:
-                    loss_total+=self.ewc_lambda*0.5*K.sum((self.precisions[i][weight_no]) * (weights-self.means[i][weight_no])**2)
-            return loss_total
         return ewc_reg
         
         

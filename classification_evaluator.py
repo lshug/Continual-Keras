@@ -26,11 +26,11 @@ class ContinualClassifierEvaluator():
             self.test_labels = test_labels
             self.test_accuracies = np.zeros((len(tasks),len(tasks)))
     
-    def train(self,verbose=2):
+    def train(self,epochs=200,verbose=2):
         task_indices = range(len(self.tasks)) if self.task_order is None else self.task_order
         for i in task_indices:
             print('Training on task %d'%i)
-            self.classifier.task_fit(self.tasks[i],self.labels[i],i,verbose=verbose)
+            self.classifier.task_fit(self.tasks[i],self.labels[i],i,epochs=epochs,verbose=verbose)
             for j in range(len(self.tasks)):
                 try:
                     self.accuracies[i,j] = self.classifier.evaluate(self.tasks[j],self.labels[j],j)[1]

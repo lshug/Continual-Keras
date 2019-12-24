@@ -17,21 +17,16 @@ class ContinualClassifier(ABC):
     total number of classes across all tasks; in this case, the number of 
     classes in each task should be the same. If model's not a dict with
     architecture specs, it should be a keras model (with appropriately-named
-    layers). Possible optimizers are 'sgd' and 'adam', although adam is actually
-    AdamW. Any loss and any activation from keras api can be used.
-    If singleheaded_classes is None, models are stored in self.models.
+    layers). If singleheaded_classes is None, models are stored in self.models.
     """
-    def __init__(self, shape, optimizer='sgd',lr=0.001, loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None,  model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
+    def __init__(self, optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None,  model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
         self.fitted_tasks = 0
-        optim = Adam(lr)
-        if optimizer is 'sgd':
-            optim = SGD(lr)
-        self.optimizer = optim
+        self.optimizer = optimizer
         self.loss = loss
         self.metrics = metrics
         self.regularizer_loaded = False
         if isinstance(model,dict):
-            inp = Input(shape,name='inputlayer')
+            inp = Input(model['input_shape'],name='inputlayer')
             x = inp
             for i in range(0,model['layers']):
                 x = Dense(model['units'],activation=model['activation'],name='dense%d'%i)(x)
@@ -44,7 +39,7 @@ class ContinualClassifier(ABC):
                 self.singleheaded = False
                 self.models = []
             self.model=Model(inp,x)
-            self.model.compile(loss=loss,optimizer=optim,metrics=metrics)
+            self.model.compile(loss=loss,optimizer=optimizer,metrics=metrics)
         else:
             if singleheaded_classes is not None:
                 x = Dense(singleheaded_classes,activation='softmax',name='singlehead')(x)
@@ -54,7 +49,7 @@ class ContinualClassifier(ABC):
                 self.singleheaded = False
                 self.models = []
             self.model=Model(model.input,x)
-            self.model.compile(loss=loss,optimizer=optim,metrics=metrics)
+            self.model.compile(loss=loss,optimizer=optimizer,metrics=metrics)
             
 #    @abstractmethod
     def task_fit_method(self, X, Y, new_task, model, batch_size = 32, epochs=200, validation_data=None, verbose=0):

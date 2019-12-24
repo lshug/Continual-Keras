@@ -9,6 +9,7 @@ import tensorflow as tf
 from classification_evaluator import ContinualClassifierEvaluator
 from utils import divide_dataset_into_tasks,split_train_test,get_permute_mnist_tasks
 from EWC_classifier import EWCClassifier
+from online_EWC_classifier import OnlineEWCClassifier
 from keras.datasets import mnist
 import os
 
@@ -25,8 +26,8 @@ if task is 'permnist':
     tasks, labels = get_permute_mnist_tasks(5,1250)
 
 tasks, labels, test_tasks, test_labels = split_train_test(tasks,labels)
-ewc = EWCClassifier((tasks[0].shape[1],),fisher_n=3000,ewc_lambda=50,lr=0.01,optimizer='sgd',model={'layers':2, 'units':100,'dropout':0,'activation':'relu'})
+ewc = OnlineEWCClassifier(fisher_n=3000,ewc_lambda=50,optimizer='sgd',model={'input_shape':(tasks[0].shape[1],),'layers':2, 'units':100,'dropout':0,'activation':'relu'})
 evaluator = ContinualClassifierEvaluator(ewc, tasks, labels, test_tasks, test_labels)
-evaluator.train(verbose=1)
+evaluator.train(epochs=100,verbose=1)
 evaluator.evaluate(save_accuracies_to_file='accuracies.npy')
 evaluator.evaluate(True,save_accuracies_to_file='test_accuracies.npy',)
