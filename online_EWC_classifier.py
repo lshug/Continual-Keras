@@ -10,22 +10,34 @@ from sklearn.utils import shuffle
 from tqdm import tqdm
 
 class OnlineEWCClassifier(ContinualClassifier):
-    def __init__(self, ewc_lambda=1, fisher_n=0, empirical=False, gamma=1, optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}):
+    def __init__(self, ewc_lambda=1, gamma=1, fisher_n=0, empirical=False, optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}):
         self.ewc_lambda = ewc_lambda
+        self.gamma=gamma
         self.mean = None
         self.precision = None
         self.task_count = 0
         self.fisher_n=fisher_n
-        self.empirical=empirical
-        self.gamma=gamma
+        self.empirical=empirical        
         super().__init__(optimizer,loss,metrics,singleheaded_classes,model)
     
-    def save_model(self, filename):
-        pass
+    def save_model_method(self, objs):
+        objs['ewc_lambda']=self.ewc_lambda
+        objs['gamma']=self.gamma
+        objs['mean']=self.mean
+        objs['precision']=self.precision
+        objs['task_count']=self.task_count
+        objs['fisher_n']=self.fisher_n
+        objs['empirical']=self.empirical
         
     
-    def load_model(self, filename):
-        pass
+    def load_model_method(self, objs):
+        self.ewc_lambda=objs['ewc_lambda']
+        self.gamma=objs['gamma']
+        self.mean=objs['mean']
+        self.precision=objs['precision']
+        self.task_count=objs['task_count']
+        self.fisher_n=objs['fisher_n']
+        self.empirical=objs['empirical']
     
     def task_fit_method(self, X, Y, model, new_task, batch_size, epochs, validation_data=None, verbose=2):
         if new_task:

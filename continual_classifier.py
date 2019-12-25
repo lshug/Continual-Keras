@@ -3,7 +3,7 @@ from keras.models import Model
 from keras.layers import Input, Dense, Activation, Dropout
 from keras.optimizers import SGD, Adam
 from abc import ABC, abstractmethod
-
+import pickle
 
 class ContinualClassifier(ABC):
     """
@@ -51,15 +51,68 @@ class ContinualClassifier(ABC):
             self.model=Model(model.input,x)
             self.model.compile(loss=loss,optimizer=optimizer,metrics=metrics)
             
-#    @abstractmethod
+    @abstractmethod
     def task_fit_method(self, X, Y, new_task, model, batch_size = 32, epochs=200, validation_data=None, verbose=0):
-        print('No task fit method')
+        pass
         
         
-#    @abstractmethod
+
     def save_model(self, filename):
-        pass        
+        objs = {}
+        objs['fitted_tasks']=self.fitted_tasks
+        objs['optimizer']=self.optimizer
+        objs['loss']=self.loss
+        objs['metrics'] = self.metrics
+        objs['singleheaded']=self.singleheaded
+        if self.singleheaded:
+            objs['singlehead_config']=self.model.get_config()
+            objs['singlehead_weights']=self.mode.get_weights()
+        else:
+            objs['base_config']=self.model.get_config()
+            objs['base_weights']=self.model.get_weights()            
+            objs['configs'] = [m.get_config() for m in models]
+            objs['heads'] = [m.get_weights()[-1] for m in models]
+        self.save_model_method(objs)
+        pickle.dump(objs, open(filename,'wb'))
+
+    @abstractmethod
+    def save_model_method(self, objs):
+        pass
+    
+    
+    def load_model(self, filename):
+        self.regularizer_loaded = False
+        objs = pickle.load(open(filename,'rb')) 
+        self.optimizer = objs['optimizer']
+        self.loss=objs['loss']
+        self.metrics=objs['metrics']
+        self.singleheaded=objs['singleheaded']
+        if self.singleheaded:
+            self.model = Model.from_config(objs['singlehead_config'])
+            self.model.set_weights(objs['singlehead_weights'])            
+            self.model.compile(optimizer=self.optimizer,loss=self.loss,metrics=self.metrics)
+        else:
+            self.model = Model.from_config(objs['base_config'])
+            base_weights = objs['base_weights']
+            self.model.set_weights(base_weights)
+            configs = objs['configs']
+            heads  = objs['heads']
+            models = []
+            for i in range(len(configs)):
+                model = Model.from_config(configs[i])
+                body = base_weights[:]
+                body.append(heads[i])
+                model.set_weights(body)
+                model.compile(optimizer=self.optimizer,loss=self.loss,metrics=self.metrics)
+                models.append(model)
+            self.models = models
+        self.load_model_method(objs)
         
+
+    @abstractmethod
+    def load_model_method(self, objs):
+        pass
+    
     def task_model(self,task=-1):
         if self.singleheaded:
             return self.model
@@ -139,6 +192,4 @@ class ContinualClassifier(ABC):
             i+=1
         self.model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
         
-#    @abstractmethod
-    def load_model(self, filename):
-        pass
+

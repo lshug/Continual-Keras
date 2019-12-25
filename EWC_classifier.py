@@ -19,12 +19,23 @@ class EWCClassifier(ContinualClassifier):
         self.empirical=empirical
         super().__init__(optimizer,loss,metrics,singleheaded_classes,model)
     
-    def save_model(self, filename):
-        pass
+    def save_model_method(self, objs):
+        objs['ewc_lambda']=self.ewc_lambda
+        objs['means']=self.means
+        objs['precisions']=self.precisions
+        objs['task_count']=self.task_count
+        objs['fisher_n']=self.fisher_n
+        objs['empirical']=self.empirical
+        
         
     
-    def load_model(self, filename):
-        pass
+    def load_model_method(self, objs):
+        self.ewc_lambda=objs['ewc_lambda']
+        self.means=objs['means']
+        self.precisions=objs['precisions']
+        self.task_count=objs['task_count']
+        self.fisher_n=objs['fisher_n']
+        self.empirical=objs['empirical']
     
     def task_fit_method(self, X, Y, model, new_task, batch_size, epochs, validation_data=None, verbose=2):
         if new_task:
