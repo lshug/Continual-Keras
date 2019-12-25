@@ -10,14 +10,14 @@ from sklearn.utils import shuffle
 from tqdm import tqdm
 
 class EWCClassifier(ContinualClassifier):
-    def __init__(self, ewc_lambda=1, fisher_n=0, empirical=False, optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None, model={'layers':3, 'units':200,'dropout':0,'activation':'relu'}):
+    def __init__(self, ewc_lambda=1, fisher_n=0, empirical=False, *args, **kwargs):
         self.ewc_lambda = ewc_lambda
         self.means = []
         self.precisions = []
         self.task_count = 0
         self.fisher_n=fisher_n
         self.empirical=empirical
-        super().__init__(optimizer,loss,metrics,singleheaded_classes,model)
+        super().__init__(*args, **kwargs)
     
     def save_model_method(self, objs):
         objs['ewc_lambda']=self.ewc_lambda

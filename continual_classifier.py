@@ -19,13 +19,13 @@ class ContinualClassifier(ABC):
     architecture specs, it should be a keras model (with appropriately-named
     layers). If singleheaded_classes is None, models are stored in self.models.
     """
-    def __init__(self, optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'], singleheaded_classes=None,  model={'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
-        self.fitted_tasks = 0
-        self.optimizer = optimizer
-        self.loss = loss
-        self.metrics = metrics
+    def __init__(self, singleheaded_classes=None,  model={'input_shape':(784,),'optimizer':'sgd', 'loss':'categorical_crossentropy', 'metrics':['accuracy'],'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
+        self.fitted_tasks = 0        
         self.regularizer_loaded = False
         if isinstance(model,dict):
+            self.optimizer = model['optimizer']
+            self.loss = model['loss']
+            self.metrics = model['metrics']
             inp = Input(model['input_shape'],name='inputlayer')
             x = inp
             for i in range(0,model['layers']):
@@ -39,8 +39,11 @@ class ContinualClassifier(ABC):
                 self.singleheaded = False
                 self.models = []
             self.model=Model(inp,x)
-            self.model.compile(loss=loss,optimizer=optimizer,metrics=metrics)
+            self.model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
         else:
+            self.optimizer = model.optimizer
+            self.loss = model.loss
+            self.metrics = model.metrics
             if singleheaded_classes is not None:
                 x = Dense(singleheaded_classes,activation='softmax',name='singlehead')(x)
                 self.singleheaded = True
@@ -49,13 +52,11 @@ class ContinualClassifier(ABC):
                 self.singleheaded = False
                 self.models = []
             self.model=Model(model.input,x)
-            self.model.compile(loss=loss,optimizer=optimizer,metrics=metrics)
+            self.model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
             
     @abstractmethod
     def task_fit_method(self, X, Y, new_task, model, batch_size = 32, epochs=200, validation_data=None, verbose=0):
         pass
-        
-        
 
     def save_model(self, filename):
         objs = {}
@@ -75,7 +76,6 @@ class ContinualClassifier(ABC):
         self.save_model_method(objs)
         pickle.dump(objs, open(filename,'wb'))
 
-    @abstractmethod
     def save_model_method(self, objs):
         pass
     
@@ -109,7 +109,6 @@ class ContinualClassifier(ABC):
         self.load_model_method(objs)
         
 
-    @abstractmethod
     def load_model_method(self, objs):
         pass
     
