@@ -8,12 +8,11 @@ import pickle
 class ContinualClassifier(ABC):
     """
     A parent class for implementations of various continual learning techniques 
-    for classification. Bulids a Keras functional model (or accepts a premade 
-    one). 
+    for classification. Wraps a Keras model object.
     """
     
     """
-    Normal init stuff. If singleheaded_classes is not None, it should be the
+    If singleheaded_classes is not None, it should be the
     total number of classes across all tasks; in this case, the number of 
     classes in each task should be the same. If model's not a dict with
     architecture specs, it should be a keras model (with appropriately-named
@@ -55,7 +54,7 @@ class ContinualClassifier(ABC):
             self.model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
             
     @abstractmethod
-    def task_fit_method(self, X, Y, new_task, model, batch_size = 32, epochs=200, validation_data=None, verbose=0):
+    def _task_fit(self, X, Y, new_task, model, batch_size = 32, epochs=200, validation_data=None, verbose=0):
         pass
 
     def save_model(self, filename):
@@ -73,10 +72,10 @@ class ContinualClassifier(ABC):
             objs['base_weights']=self.model.get_weights()            
             objs['configs'] = [m.get_config() for m in models]
             objs['heads'] = [m.get_weights()[-1] for m in models]
-        self.save_model_method(objs)
+        self._save_model(objs)
         pickle.dump(objs, open(filename,'wb'))
 
-    def save_model_method(self, objs):
+    def _save_model(self, objs):
         pass
     
     
@@ -109,7 +108,7 @@ class ContinualClassifier(ABC):
         self.load_model_method(objs)
         
 
-    def load_model_method(self, objs):
+    def _load_model(self, objs):
         pass
     
     def task_model(self,task=-1):
@@ -135,10 +134,9 @@ class ContinualClassifier(ABC):
                 x = Dense(Y.shape[1],activation='softmax',name='output_task%d'%(len(self.models)+1))(self.model.output)
                 task_Model = Model(self.model.input,x)
                 task_Model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
-                self.models.append(task_Model)
-                
+                self.models.append(task_Model)                
         model = self.task_model(task)
-        self.task_fit_method(X,Y,model,new_task,batch_size=batch_size,epochs=epochs,validation_data=validation_data,verbose=verbose)
+        self._task_fit(X,Y,model,new_task,batch_size=batch_size,epochs=epochs,validation_data=validation_data,verbose=verbose)
         if self.regularizer_loaded:
             self.clean_up_regularization()
             

@@ -13,8 +13,5 @@ class DeepClassifier(ContinualClassifier):
     def __init__(self,  *args, **kwargs):        
         super().__init__(*args, **kwargs)
     
-    def task_fit_method(self, X, Y, model, new_task, batch_size, epochs, validation_data=None, verbose=2):
-        i = 0
-        j = 0
-        model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
+    def _task_fit(self, X, Y, model, new_task, batch_size, epochs, validation_data=None, verbose=2):
         model.fit(X,Y, batch_size=batch_size, epochs=epochs, validation_data = validation_data, verbose=verbose, shuffle=True)

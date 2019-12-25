@@ -2,6 +2,7 @@ import numpy as np
 from keras.utils import to_categorical
 from keras.losses import categorical_crossentropy
 import keras.backend as K
+import tensorflow as tf
 import math
 from tqdm import tqdm
 from sklearn.utils import shuffle
@@ -139,26 +140,26 @@ def rate_matrix(m,epsilon=0.01):
     
     
 
-def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None):
+def estimate_fisher_diagonal(model, xs, X, Y=None, fisher_n=0, len_weights=None):
     if len_weights is None:
         len_weights = len(model.get_weights())
     fisher_estimates = [np.zeros_like(w) for w in model.get_weights()[0:len_weights]]
     if fisher_n is 0 or fisher_n>X.shape[0]:
         fisher_n = X.shape[0]
     X=X[0:fisher_n]
-    if Y is None:
-        X = np.random.permutation(X)
-        label = model.predict(X)
-        label = np.squeeze(np.eye(label.shape[1])[np.argmax(label,-1).reshape(-1)])
-    else:
-        X,Y = shuffle(X,Y)
-        label=Y[0:fisher_n]    
     gradients = []
     sess=K.get_session()
     y_placeholder = K.placeholder(dtype='float32', shape=label[0].shape)
-    grads_tesnor = K.gradients(categorical_crossentropy(y_placeholder,model.output),model.trainable_weights)
+    if Y is None:
+        X = np.random.permutation(X)
+        label_tensor = tf.where(tf.equal(tf.reduce_max(model.output,1,keepdims=True),model.output),tf.constant(1,shape=(1,model.output.shape[1])),tf.constant(0,shape=(1    ,model.output.shape[1])))
+        grads_tesnor = K.gradients(categorical_crossentropy(label_tensor,model.output),xs)        
+    else:
+        X,Y = shuffle(X,Y)
+        label=Y[0:fisher_n]    
+        y_placeholder = K.placeholder(dtype='float32', shape=label[0].shape)
+        grads_tesnor = K.gradients(categorical_crossentropy(y_placeholder,model.output),xs)
     for i in tqdm(range(fisher_n), desc='Estimating FIM diagonal'):
-        gradients.append(sess.run(grads_tesnor, feed_dict={y_placeholder:label[i],model.input:np.array([X[i]])}))       
         gradient = sess.run(grads_tesnor, feed_dict={y_placeholder:label[i],model.input:np.array([X[i]])})
         for j in range(len_weights):
             fisher_estimates[j]+=gradient[j]**2/fisher_n
