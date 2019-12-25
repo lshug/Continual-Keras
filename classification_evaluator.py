@@ -75,5 +75,5 @@ class ContinualClassifierEvaluator():
         if save_accuracies_to_file is not None:
             np.save(save_accuracies_to_file,self.accuracies)
             
-        return AAC, BWT, FWT, slope_metric
+        return self.accuracies, AAC, BWT, FWT, slope_metric
 

@@ -86,14 +86,14 @@ def get_permute_mnist_tasks(task_no,samples_per_task=60000):
     x_train=x_train[0:samples_per_task]
     y_train=y_train[0:samples_per_task]
     tasks = []
-    tasks.append(x_train)
+    #tasks.append(x_train)
     labels = []
-    labels.append(y_train)
+    #labels.append(y_train)
     def make_y(row, task):
         emp = np.zeros(10*task_no)
         emp[task*10:task*10+10] = row
         return emp
-    for i in tqdm(range(task_no-1)):
+    for i in tqdm(range(task_no)):
         mask = np.random.permutation(784)
         tasks.append(np.apply_along_axis(lambda x: x[mask],1,x_train))
         y_train_expanded = np.apply_along_axis(make_y,1,y_train,i)
@@ -144,7 +144,7 @@ def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None):
         len_weights = len(model.get_weights())
     fisher_estimates = [np.zeros_like(w) for w in model.get_weights()[0:len_weights]]
     if fisher_n is 0 or fisher_n>X.shape[0]:
-        fisher_n = X.shape[0]        
+        fisher_n = X.shape[0]
     X=X[0:fisher_n]
     if Y is None:
         X = np.random.permutation(X)
@@ -157,11 +157,9 @@ def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None):
     sess=K.get_session()
     y_placeholder = K.placeholder(dtype='float32', shape=label[0].shape)
     grads_tesnor = K.gradients(categorical_crossentropy(y_placeholder,model.output),model.trainable_weights)
-    for i in tqdm(range(fisher_n)):
+    for i in tqdm(range(fisher_n), desc='Estimating FIM diagonal'):
         gradients.append(sess.run(grads_tesnor, feed_dict={y_placeholder:label[i],model.input:np.array([X[i]])}))       
-    for i in tqdm(range(fisher_n)):
+        gradient = sess.run(grads_tesnor, feed_dict={y_placeholder:label[i],model.input:np.array([X[i]])})
         for j in range(len_weights):
-            fisher_estimates[j]+=gradients[i][j]**2        
-    for i in range(0,len_weights):
-        fisher_estimates[i]=fisher_estimates[i]/fisher_n 
+            fisher_estimates[j]+=gradient[j]**2/fisher_n
     return fisher_estimates

@@ -28,10 +28,8 @@ class OnlineEWCClassifier(ContinualClassifier):
         pass
     
     def task_fit_method(self, X, Y, model, new_task, batch_size, epochs, validation_data=None, verbose=2):
-        i = 0
-        j = 0
         if new_task:
-            self.inject_regularization(self.EWC)
+            self.inject_regularization(self.online_EWC)
         model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
         model.fit(X,Y, batch_size=batch_size, epochs=epochs, validation_data = validation_data, verbose=verbose, shuffle=True)
         if new_task:
@@ -54,7 +52,7 @@ class OnlineEWCClassifier(ContinualClassifier):
         
             
     
-    def EWC(self,weight_no):
+    def online_EWC(self,weight_no):
         task_count = self.task_count
         if task_count is 0:
             def ewc_reg(weights):

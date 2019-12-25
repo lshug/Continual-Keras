@@ -27,8 +27,6 @@ class EWCClassifier(ContinualClassifier):
         pass
     
     def task_fit_method(self, X, Y, model, new_task, batch_size, epochs, validation_data=None, verbose=2):
-        i = 0
-        j = 0
         if new_task:
             self.inject_regularization(self.EWC)
         model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
