@@ -38,3 +38,4 @@ evaluator = ContinualClassifierEvaluator(ewc, tasks, labels, test_tasks, test_la
 evaluator.train(epochs=50,verbose=1)
 evaluator.evaluate(save_accuracies_to_file='accuracies.npy')
 print(evaluator.evaluate(True,save_accuracies_to_file='test_accuracies.npy',)[0])
+    

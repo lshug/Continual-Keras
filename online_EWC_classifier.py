@@ -40,8 +40,7 @@ class OnlineEWCClassifier(ContinualClassifier):
         self.empirical=objs['empirical']
     
     def _task_fit(self, X, Y, model, new_task, batch_size, epochs, validation_data=None, verbose=2):
-        if new_task:
-            self.inject_regularization(self.online_EWC)
+        self.inject_regularization(self.online_EWC)
         model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
         model.fit(X,Y, batch_size=batch_size, epochs=epochs, validation_data = validation_data, verbose=verbose, shuffle=True)
         if new_task:
@@ -53,7 +52,7 @@ class OnlineEWCClassifier(ContinualClassifier):
     def update_laplace_approxiation_parameters(self,X,Y=None):
         model = self.task_model()
         len_weights = len(model.get_weights())-(not self.singleheaded)
-        fisher_estimates = estimate_fisher_diagonal(model,model.trainable_weights,X,Y,self.fisher_n,len_weights)
+        fisher_estimates = estimate_fisher_diagonal(model,X,Y,self.fisher_n,len_weights)
         self.mean = model.get_weights()
         if self.task_count>0:
             prev_prec = self.precision

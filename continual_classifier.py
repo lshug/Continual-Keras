@@ -20,7 +20,7 @@ class ContinualClassifier(ABC):
     """
     def __init__(self, singleheaded_classes=None,  model={'input_shape':(784,),'optimizer':'sgd', 'loss':'categorical_crossentropy', 'metrics':['accuracy'],'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
         self.fitted_tasks = 0        
-        self.regularizer_loaded = False
+        self.regularized_model = None
         if isinstance(model,dict):
             self.optimizer = model['optimizer']
             self.loss = model['loss']
@@ -80,7 +80,7 @@ class ContinualClassifier(ABC):
     
     
     def load_model(self, filename):
-        self.regularizer_loaded = False
+        self.regularized_model = None
         objs = pickle.load(open(filename,'rb')) 
         self.optimizer = objs['optimizer']
         self.loss=objs['loss']
@@ -137,7 +137,7 @@ class ContinualClassifier(ABC):
                 self.models.append(task_Model)                
         model = self.task_model(task)
         self._task_fit(X,Y,model,new_task,batch_size=batch_size,epochs=epochs,validation_data=validation_data,verbose=verbose)
-        if self.regularizer_loaded:
+        if self.regularized_model is not None:
             self.clean_up_regularization()
             
     
@@ -163,13 +163,15 @@ class ContinualClassifier(ABC):
                 raise Exception('Could not retrive the head for task %d.'%task)
         return self.task_model(task).predict(X,batch_size=batch_size,verbose=verbose)
     
-    def inject_regularization(self,regularizer_generator):
-        self.regularizer_loaded = True
+    def inject_regularization(self,regularizer_generator,model=None):
+        if model==None:
+            model = self.model
+        self.regularized_model = model
         i = 0
         j = 0
         while True:            
             try:
-                l = self.model.get_layer(index=i)
+                l = model.get_layer(index=i)
             except:
                 break
             for k in l.trainable_weights:
@@ -178,15 +180,16 @@ class ContinualClassifier(ABC):
             i+=1
             
     def clean_up_regularization(self):
+        model = self.regularized_model
         i = 0
         while True:            
             try:
-                l = self.model.get_layer(index=i)
+                l = model.get_layer(index=i)
             except:
                 break
             if len(l.trainable_weights)>0:
                 l._losses=[]
             i+=1
-        self.model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
+        model.compile(loss=self.loss,optimizer=self.optimizer,metrics=self.metrics)
         
 
