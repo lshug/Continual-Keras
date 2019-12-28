@@ -141,7 +141,7 @@ def rate_matrix(m,epsilon=0.01):
     
 
 def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None, return_gradients=False, xs=None):
-    if xs=None:
+    if xs==None:
         xs=model.trainable_weights
     if len_weights is None:
         len_weights = len(model.get_weights())
@@ -156,14 +156,15 @@ def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None, ret
         X = np.random.permutation(X)
         #note for future: turns a model output vector (e.g. [0.3, 0.4, 0.2, 0.1]) into a one-hot (e.g. [0,1,0,0]) by keeping making a max-only copy, making a boolean vector by checking element equality with the elements of the original, and drawing from 0s where false and 1s when true.
         label_tensor = tf.where(tf.equal(tf.reduce_max(model.output,1,keepdims=True),model.output),tf.constant(1,shape=(1,model.output.shape[1])),tf.constant(0,shape=(1,model.output.shape[1])))
-        grads_tesnor = K.gradients(categorical_crossentropy(label_tensor,model.output),xs)        
+        grads_tensor = K.gradients(categorical_crossentropy(label_tensor,model.output),xs)        
     else:
-        label=Y[0:fisher_n]    
+        Y=Y[0:fisher_n]        
         X,Y = shuffle(X,Y)        
+        label=Y
         y_placeholder = K.placeholder(dtype='float32', shape=label[0].shape)
-        grads_tesnor = K.gradients(categorical_crossentropy(y_placeholder,model.output),xs)
+        grads_tensor = K.gradients(categorical_crossentropy(y_placeholder,model.output),xs)
     for i in tqdm(range(fisher_n), desc='Estimating FIM diagonal'):
-        gradient = sess.run(grads_tesnor, feed_dict={y_placeholder:label[i],model.input:np.array([X[i]])})
+        gradient = sess.run(grads_tensor, feed_dict={y_placeholder:label[i],model.input:np.array([X[i]])})
         if return_gradients:
             gradients.append(gradient)
         for j in range(len_weights):

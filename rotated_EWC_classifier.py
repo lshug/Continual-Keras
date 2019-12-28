@@ -40,15 +40,15 @@ class RotatedEWCClassifier(ContinualClassifier):
         self.empirical=objs['empirical']
     
     def _task_fit(self, X, Y, model, new_task, batch_size, epochs, validation_data=None, verbose=2):        
-        if task_count == 0: #first task
+        if self.task_count == 0: #first task
             model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
             model.fit(X,Y, batch_size=batch_size, epochs=epochs, validation_data = validation_data, verbose=verbose, shuffle=True)
         elif new_task: #non-first task
             transformed_model = self.transform(model)
             if self.empirical:
-                self.update_laplace_approxiation_parameters(X,Y,transformed_model)
+                self.update_laplace_approxiation_parameters(transformed_model,X,Y)
             else:
-                self.update_laplace_approxiation_parameters(X,None,transformed_model)
+                self.update_laplace_approxiation_parameters(transformed_model,X)
             self.inject_regularization(self.EWC,transformed_model)
             transformed_model.compile(loss=self.loss,optimizer=self.optimizer,metrics=['accuracy'])
             transformed_model.fit(X,Y, batch_size=batch_size, epochs=epochs, validation_data = validation_data, verbose=verbose, shuffle=True)
@@ -67,29 +67,29 @@ class RotatedEWCClassifier(ContinualClassifier):
         rotated_layers=[]
         layer_inputs=[]
         layer_outputs=[]
-        input_sums  = [np.zeros([l.input.shape[-1]]*2) for l in rotated_layers]
-        output_sums = [np.zeros([l.output.shape[-1]]*2) for l in rotated_layers]        
         for l in model.layers:
-            if 'Dense' in repr(l) or 'Conv2D' in repr(l) and 'softmax' not in repr(l.activation):                
+            if ('Dense' in repr(l) or 'Conv2D' in repr(l)) and 'softmax' not in repr(l.activation) and 'Softmax' not in repr(l.output):                
                 rotated_layers.append(l)                                    
                 layer_inputs.append(l.input)
                 layer_outputs.append(l.output)
+        input_sums  = [np.zeros([l.input.shape[-1]]*2) for l in rotated_layers]
+        output_sums = [np.zeros([l.output.shape[-1]]*2) for l in rotated_layers]        
         X=X[0:rotate_n]
         Y=Y[0:rotate_n]
-        X,Y = shuffle(X,Y)
-        y_placeholder = K.placeholder(dtype='float32', shape=Y[0].shape)
-        grads_tesnor = K.gradients(categorical_crossentropy(y_placeholder,model.output),layer_outputs)
+        X,Y = shuffle(X,Y)        
+        label_tensor = tf.where(tf.equal(tf.reduce_max(model.output,1,keepdims=True),model.output),tf.constant(1,shape=(1,model.output.shape[1])),tf.constant(0,shape=(1,model.output.shape[1])))        
+        grads_tensor = K.gradients(categorical_crossentropy(label_tensor,model.output),layer_outputs)
         gradients = []
         sess=K.get_session()
-        for i in tqdm(range(fisher_n), desc='Rotating'):
-            gradient = sess.run(grads_tesnor, feed_dict={y_placeholder:Y[i],model.input:np.array([X[i]])})
+        for i in tqdm(range(rotate_n), desc='Rotating'):
+            gradient = sess.run(grads_tensor, feed_dict={model.input:np.array([X[i]])})
             for j in range(len(layer_outputs)):
                 if 'Dense' in repr(rotated_layers[j]):
-                    output_sums[j]+=np.dot(gradient[j].tranpose,gradient[j])/rotate_n
-            inputs = sess.run(layer_inputs,feed_dict={y_placeholder:Y[i],model.input:np.array([X[i]])})
+                    output_sums[j]+=np.dot(gradient[j].transpose(),gradient[j])/rotate_n
+            inputs = sess.run(layer_inputs,feed_dict={model.input:np.array([X[i]])})
             for j in range(len(layer_inputs)):
                 if 'Dense' in repr(rotated_layers[j]):
-                    input_sums[j]+=np.dot(inputs[j].tranpose,inputs[j])/rotate_n
+                    input_sums[j]+=np.dot(inputs[j].transpose(),inputs[j])/rotate_n
         for i in tqdm(range(len(output_sums)),desc='Doing SVDs'):
             if 'Dense' in repr(rotated_layers[j]):
                 self.U1[rotated_layers[i]]=np.linalg.svd(input_sums[i], full_matrices=False)[0]
@@ -122,7 +122,7 @@ class RotatedEWCClassifier(ContinualClassifier):
         u2b = np.zeros_like(u2b)
         u1l.set_weights([u2w,u2b])
         u2l.trainable = False
-        
+        x = Activation(dense_layer.activation)(x)
         return x
         
         
@@ -152,7 +152,7 @@ class RotatedEWCClassifier(ContinualClassifier):
             else:
                 x = layer(layer_input)
             network_dict['new_output_tensor_of'].update({layer.name: x})
-        return = Model(inputs=model.input,outputs=x)
+        return Model(inputs=model.input,outputs=x)
         
     def combine(self,model,transformed_model):
         for l in model.layers:
@@ -163,7 +163,7 @@ class RotatedEWCClassifier(ContinualClassifier):
                 b = layer.get_weights()[1]
                 model.set_weights([U2 @ transformed_W.transpose @ U1,b])
     
-    def update_laplace_approxiation_parameters(self,X,Y=None,model):
+    def update_laplace_approxiation_parameters(self,model,X,Y=None):
         len_weights = len(model.get_weights())-(not self.singleheaded)
         fisher_estimates = estimate_fisher_diagonal(model,X,Y,self.fisher_n,len_weights)        
         self.means.append(model.get_weights())        
