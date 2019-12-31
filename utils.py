@@ -144,14 +144,13 @@ def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None, ret
     if xs==None:
         xs=model.trainable_weights
     if len_weights is None:
-        len_weights = len(model.get_weights())
-    fisher_estimates = [np.zeros_like(w) for w in model.get_weights()[0:len_weights]]
+        len_weights = len(K.batch_get_value(model.trainable_weights))
+    fisher_estimates = [np.zeros_like(w) for w in K.batch_get_value(model.trainable_weights)[0:len_weights]]
     if fisher_n is 0 or fisher_n>X.shape[0]:
         fisher_n = X.shape[0]
     X=X[0:fisher_n]
     gradients = []
-    sess=K.get_session()
-    y_placeholder = K.placeholder(dtype='float32', shape=label[0].shape)
+    sess=K.get_session()    
     if Y is None:
         X = np.random.permutation(X)
         #note for future: turns a model output vector (e.g. [0.3, 0.4, 0.2, 0.1]) into a one-hot (e.g. [0,1,0,0]) by keeping making a max-only copy, making a boolean vector by checking element equality with the elements of the original, and drawing from 0s where false and 1s when true.
@@ -162,9 +161,12 @@ def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None, ret
         X,Y = shuffle(X,Y)        
         label=Y
         y_placeholder = K.placeholder(dtype='float32', shape=label[0].shape)
-        grads_tensor = K.gradients(categorical_crossentropy(y_placeholder,model.output),xs)
+        grads_tensor = K.gradients(categorical_crossentropy(y_placeholder,model.output),xs)        
     for i in tqdm(range(fisher_n), desc='Estimating FIM diagonal'):
-        gradient = sess.run(grads_tensor, feed_dict={y_placeholder:label[i],model.input:np.array([X[i]])})
+        feed_dict={model.input:np.array([X[i]])}
+        if Y is not None:
+            feed_dict[y_placeholder]=Y[i]
+        gradient = sess.run(grads_tensor, feed_dict=feed_dict)
         if return_gradients:
             gradients.append(gradient)
         for j in range(len_weights):

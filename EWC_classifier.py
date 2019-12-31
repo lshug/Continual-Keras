@@ -49,9 +49,9 @@ class EWCClassifier(ContinualClassifier):
     
     def update_laplace_approxiation_parameters(self,X,Y=None):
         model = self.task_model()
-        len_weights = len(model.get_weights())-(not self.singleheaded)
+        len_weights = len(K.batch_get_value(model.trainable_weights))-(not self.singleheaded)
         fisher_estimates = estimate_fisher_diagonal(model,X,Y,self.fisher_n,len_weights)        
-        self.means.append(model.get_weights())        
+        self.means.append(K.batch_get_value(model.trainable_weights))        
         self.precisions.append(fisher_estimates)
         self.task_count+=1
                         
@@ -62,11 +62,8 @@ class EWCClassifier(ContinualClassifier):
                 return 0
             return ewc_reg
         def ewc_reg(weights):
-            loss_total = None
+            loss_total = 0
             for i in range(task_count):
-                if loss_total is None:
-                    loss_total=self.ewc_lambda*0.5*K.sum((self.precisions[i][weight_no]) * (weights-self.means[i][weight_no])**2)
-                else:
                     loss_total+=self.ewc_lambda*0.5*K.sum((self.precisions[i][weight_no]) * (weights-self.means[i][weight_no])**2)
             return loss_total
         return ewc_reg

@@ -51,9 +51,9 @@ class OnlineEWCClassifier(ContinualClassifier):
 
     def update_laplace_approxiation_parameters(self,X,Y=None):
         model = self.task_model()
-        len_weights = len(model.get_weights())-(not self.singleheaded)
+        len_weights = len(K.batch_get_value(model.trainable_weights))-(not self.singleheaded)
         fisher_estimates = estimate_fisher_diagonal(model,X,Y,self.fisher_n,len_weights)
-        self.mean = model.get_weights()
+        self.mean = K.batch_get_value(model.trainable_weights)
         if self.task_count>0:
             prev_prec = self.precision
             for i in range(0,len_weights):
