@@ -140,7 +140,7 @@ def rate_matrix(m,epsilon=0.01):
     
     
 
-def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None, return_gradients=False, xs=None):
+def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None, return_gradients=False, true_estimate=True, nonzero_gradient_mean=True, xs=None):
     if xs==None:
         xs=model.trainable_weights
     if len_weights is None:
@@ -148,6 +148,7 @@ def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None, ret
     fisher_estimates = [np.zeros_like(w) for w in K.batch_get_value(model.trainable_weights)[0:len_weights]]
     if fisher_n is 0 or fisher_n>X.shape[0]:
         fisher_n = X.shape[0]
+    true_length = len(X)
     X=X[0:fisher_n]
     gradients = []
     sess=K.get_session()    
@@ -162,15 +163,28 @@ def estimate_fisher_diagonal(model, X, Y=None, fisher_n=0, len_weights=None, ret
         label=Y
         y_placeholder = K.placeholder(dtype='float32', shape=label[0].shape)
         grads_tensor = K.gradients(categorical_crossentropy(y_placeholder,model.output),xs)        
-    for i in tqdm(range(fisher_n), desc='Estimating FIM diagonal'):
+    for i in tqdm(range(fisher_n), desc='Calculating gradients'):
         feed_dict={model.input:np.array([X[i]])}
         if Y is not None:
             feed_dict[y_placeholder]=Y[i]
         gradient = sess.run(grads_tensor, feed_dict=feed_dict)
-        if return_gradients:
-            gradients.append(gradient)
+        gradients.append(gradient)
+    if nonzero_gradient_mean:
+        gradient_means=[]
+        for j in tqdm(range(len_weights), desc='Calculating gradient means'):
+            grad_sum = 0
+            for i in range(fisher_n):
+                grad_sum+=gradients[i][j]
+            grad_sum/=fisher_n
+            gradient_means.append(grad_sum)
+    else:
+        gradient_means=[]
         for j in range(len_weights):
-            fisher_estimates[j]+=gradient[j]**2/fisher_n
+            gradient_means.append(0)
+    for i in tqdm(range(fisher_n), desc='Estimating FIM diagonal'):
+        for j in range(len_weights):
+            fisher_estimates[j]+=(gradients[i][j]-gradient_means[j])**2/fisher_n
+    fisher_estimates = [(true_length if true_estimate else 1)*x for x in fisher_estimates]
     if return_gradients:
         return fisher_estimates, gradients
     return fisher_estimates

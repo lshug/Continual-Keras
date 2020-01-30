@@ -10,7 +10,7 @@ from sklearn.utils import shuffle
 from tqdm import tqdm
 
 class RotatedEWCClassifier(ContinualClassifier):
-    def __init__(self, ewc_lambda=1, fisher_n=0, rotate_n=0, empirical=False, true_lambda=True, *args, **kwargs):
+    def __init__(self, ewc_lambda=1, fisher_n=0, rotate_n=0, empirical=False, *args, **kwargs):
         self.ewc_lambda = ewc_lambda
         self.means = []
         self.precisions = []
@@ -18,7 +18,6 @@ class RotatedEWCClassifier(ContinualClassifier):
         self.fisher_n=fisher_n
         self.rotate_n=rotate_n
         self.empirical=empirical
-        self.true_lambda = true_lambda
         self.U1 = {}
         self.U2 = {}
         super().__init__(*args, **kwargs)
@@ -31,7 +30,7 @@ class RotatedEWCClassifier(ContinualClassifier):
         objs['fisher_n']=self.fisher_n
         objs['rotate_n']=self.rotate_n
         objs['empirical']=self.empirical
-        objs['true_lambda']=self.true_lambda
+        
     
     def load_model_method(self, objs):
         self.ewc_lambda=objs['ewc_lambda']
@@ -41,7 +40,6 @@ class RotatedEWCClassifier(ContinualClassifier):
         self.fisher_n=objs['fisher_n']
         self.rotate_n=objs['rotate_n']
         self.empirical=objs['empirical']
-        self.true_lambda=objs['true_lambda']
         self.U1={}
         self.U2={}
     
@@ -76,16 +74,16 @@ class RotatedEWCClassifier(ContinualClassifier):
         layer_inputs=[]
         layer_outputs=[]
         for l in model.layers:
-            if ('Dense' in repr(l) or 'Conv2D' in repr(l)) and 'softmax' not in repr(l.activation) and 'Softmax' not in repr(l.output):
-                rotated_layers.append(l)
+            if ('Dense' in repr(l) or 'Conv2D' in repr(l)) and 'softmax' not in repr(l.activation) and 'Softmax' not in repr(l.output):                
+                rotated_layers.append(l)                                    
                 layer_inputs.append(l.input)
                 layer_outputs.append(l.output)
         input_sums  = [np.zeros([l.input.shape[-1]]*2) for l in rotated_layers]
-        output_sums = [np.zeros([l.output.shape[-1]]*2) for l in rotated_layers]
+        output_sums = [np.zeros([l.output.shape[-1]]*2) for l in rotated_layers]        
         X=X[0:rotate_n]
         Y=Y[0:rotate_n]
         X,Y = shuffle(X,Y)        
-        label_tensor = tf.where(tf.equal(tf.reduce_max(model.output,1,keepdims=True),model.output),tf.constant(1,shape=(1,model.output.shape[1])),tf.constant(0,shape=(1,model.output.shape[1])))
+        label_tensor = tf.where(tf.equal(tf.reduce_max(model.output,1,keepdims=True),model.output),tf.constant(1,shape=(1,model.output.shape[1])),tf.constant(0,shape=(1,model.output.shape[1])))        
         grads_tensor = K.gradients(categorical_crossentropy(label_tensor,model.output),layer_outputs)
         gradients = []
         sess=K.get_session()
@@ -175,7 +173,7 @@ class RotatedEWCClassifier(ContinualClassifier):
     
     def update_laplace_approxiation_parameters(self,model,X,Y=None):
         len_weights = len(K.batch_get_value(model.trainable_weights))-2*(not self.singleheaded)
-        fisher_estimates = estimate_fisher_diagonal(model,X,Y,self.fisher_n,len_weights,False,self.true_lambda)        
+        fisher_estimates = estimate_fisher_diagonal(model,X,Y,self.fisher_n,len_weights)        
         self.means.append(K.batch_get_value(model.trainable_weights))        
         self.precisions.append(fisher_estimates)
 
@@ -187,7 +185,10 @@ class RotatedEWCClassifier(ContinualClassifier):
                 return 0
             return ewc_reg
         def ewc_reg(weights):
-            return self.ewc_lambda*0.5*K.sum((self.precisions[-1][weight_no]) * (weights-self.means[-1][weight_no])**2)
+            loss_total = 0
+            for i in range(1):
+                loss_total+=self.ewc_lambda*0.5*K.sum((self.precisions[-1][weight_no]) * (weights-self.means[-1][weight_no])**2)
+            return loss_total
         return ewc_reg
         
         

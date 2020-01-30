@@ -2,6 +2,7 @@ import numpy as np
 from keras.models import Model
 from keras.layers import Input, Dense, Activation, Dropout
 from keras.optimizers import SGD, Adam
+import keras.backend as K
 from abc import ABC, abstractmethod
 import pickle
 
@@ -19,8 +20,9 @@ class ContinualClassifier(ABC):
     layers). If singleheaded_classes is None, models are stored in self.models.
     """
     def __init__(self, singleheaded_classes=None,  model={'input_shape':(784,),'optimizer':'sgd', 'loss':'categorical_crossentropy', 'metrics':['accuracy'],'layers':3, 'units':400,'dropout':0,'activation':'relu'}):
-        self.fitted_tasks = 0        
-        self.regularized_model = None
+        self.fitted_tasks = 0
+        self.allow_revisiting_old_tasks = True
+        self.regularized_model = None        
         if isinstance(model,dict):
             self.optimizer = model['optimizer']
             self.loss = model['loss']
@@ -60,6 +62,7 @@ class ContinualClassifier(ABC):
     def save_model(self, filename):
         objs = {}
         objs['fitted_tasks']=self.fitted_tasks
+        objs['allow_revisiting_old_tasks']=self.allow_revisiting_old_tasks
         objs['optimizer']=self.optimizer
         objs['loss']=self.loss
         objs['metrics'] = self.metrics
@@ -82,6 +85,8 @@ class ContinualClassifier(ABC):
     def load_model(self, filename):
         self.regularized_model = None
         objs = pickle.load(open(filename,'rb')) 
+        self.fitted_tasks = objs['fitted_tasks']
+        self.allow_revisiting_old_tasks=objs['allow_revisiting_old_tasks']
         self.optimizer = objs['optimizer']
         self.loss=objs['loss']
         self.metrics=objs['metrics']
@@ -119,6 +124,8 @@ class ContinualClassifier(ABC):
     
     def task_fit(self, X, Y, task=None, batch_size = 32, epochs=200, validation_data=None, verbose=0):
         new_task = False
+        if task<self.fitted_tasks and self.allow_revisiting_old_tasks is False:
+            raise Exception('Revisiting previous tasks is disabled on this model.')
         if task is 0 or task is None or task is self.fitted_tasks:
             self.fitted_tasks+=1
             new_task = True
@@ -163,20 +170,22 @@ class ContinualClassifier(ABC):
                 raise Exception('Could not retrive the head for task %d.'%task)
         return self.task_model(task).predict(X,batch_size=batch_size,verbose=verbose)
     
-    def inject_regularization(self,regularizer_generator,model=None):
+    def inject_regularization(self,regularizer_generator,model=None,len_weights=None):
         if model==None:
             model = self.model
+        if len_weights is None:
+            len_weights = len(K.batch_get_value(model.trainable_weights))-2*(not self.singleheaded)
         self.regularized_model = model
         i = 0
         j = 0
-        while True:            
+        while j<len_weights:            
             try:
                 l = model.get_layer(index=i)
             except:
                 break
             for k in l.trainable_weights:
                 l.add_loss(regularizer_generator(j)(k))
-                j+=1                
+                j+=1
             i+=1
             
     def clean_up_regularization(self):
